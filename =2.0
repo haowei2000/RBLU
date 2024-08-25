@@ -1,0 +1,17 @@
+Looking in indexes: https://pypi.org/simple, https://pypi.ngc.nvidia.com
+Collecting torch
+  Downloading torch-2.4.0-cp310-cp310-manylinux1_x86_64.whl.metadata (26 kB)
+Requirement already satisfied: filelock in /workspace/conda/envs/chatglm3/lib/python3.10/site-packages (from torch) (3.15.4)
+Requirement already satisfied: typing-extensions>=4.8.0 in /workspace/conda/envs/chatglm3/lib/python3.10/site-packages (from torch) (4.12.2)
+Collecting sympy (from torch)
+  Downloading sympy-1.13.2-py3-none-any.whl.metadata (12 kB)
+Collecting networkx (from torch)
+  Downloading networkx-3.3-py3-none-any.whl.metadata (5.1 kB)
+Collecting jinja2 (from torch)
+  Downloading jinja2-3.1.4-py3-none-any.whl.metadata (2.6 kB)
+Requirement already satisfied: fsspec in /workspace/conda/envs/chatglm3/lib/python3.10/site-packages (from torch) (2024.6.1)
+Collecting nvidia-cuda-nvrtc-cu12==12.1.105 (from torch)
+  Downloading nvidia_cuda_nvrtc_cu12-12.1.105-py3-none-manylinux1_x86_64.whl.metadata (1.5 kB)
+Collecting nvidia-cuda-runtime-cu12==12.1.105 (from torch)
+  Downloading nvidia_cuda_runtime_cu12-12.1.105-py3-none-manylinux1_x86_64.whl.metadata (1.5 kB)
+Collecting nvidia-cuda-cupti-cu12==12.1.105 (from torch)
