@@ -1,3 +1,4 @@
+
 import pymongo
 from transformers import AutoTokenizer, AutoModel,AutoModelForCausalLM
 # from datasets import load_dataset
@@ -8,89 +9,66 @@ import os
 import random
 import pandas as pd
 
+from evaluation import Evaluation
+
 # Set HTTP proxy
-os.environ['HTTP_PROXY'] = '127.0.0.1:7890'
-os.environ['HTTPS_PROXY'] = '127.0.0.1:7890'
+os.environ['HTTP_PROXY'] = '172.17.0.1:10809'
+os.environ['HTTPS_PROXY'] = '172.17.0.1:10809'
+print('HTTP_PROXY:', os.environ['HTTP_PROXY'])
 # Set the proxies parameter when making HTTP requests
 # Example:
 # response = requests.get(url, proxies=proxies)
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    
+# Instead of using model.chat(), we directly use model.generate()
+# But you need to use tokenizer.apply_chat_template() to format your inputs as shown below
+def chatglm3_ask(model,tokenzier,device,question)->str:
+    return model.chat(tokenizer, question, history=[])[0]
 
-def recall_qa(q0,model,loop,language):
-    q_list= []
-    a_list=[]
-    q_list.append(q0)
-    if language=='zh':
-        prompt = '这个答案的问题最可能是什么:'
-    elif language== 'en':
-        prompt = 'What is the most likely question for this answer:'
-    for i in range(loop):
-        # print(f'q{i}: {q_list[i]}')
-        a = model.chat(tokenizer, q_list[i], history=[])[0]
-        a_list.append(a)
-        # print(f'a{i}: {a_list[i]}')
-        q_next = model.chat(tokenizer, prompt+a, history=[])[0]
-        q_list.append(q_next)
-    return q_list, a_list
+def qwen_ask(model,tokenizer,deivce,question):
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": question},
+    ]
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+    )
+    model_inputs = tokenizer([text], return_tensors="pt").cuda()
 
+    # Directly use generate() and tokenizer.decode() to get the output.
+    # Use `max_new_tokens` to control the maximum output length.
+    generated_ids = model.generate(
+        model_inputs.input_ids,
+        max_new_tokens=512,
+    )
+    generated_ids = [
+        output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
+    ]
 
-def recall_qas(question0_list,model,loop,language):
-    question_records =[]
-    answer_records =[]
-    for i in tqdm(range(len(question0_list))):
-        questions, answers = recall_qa(question0_list[i], model, loop,language)
-        question_records.append(questions)
-        answer_records.append(answers)
-    return question_records, answer_records
+    response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+    return response
+
+            
+
 
 device = 'cuda'
 rouge = evaluate.load('rouge')
-model_checkpoint = "/public/model/chatglm3-6b"
-# ds = load_dataset("wanghw/human-ai-comparison",revision='d5d1b67')
-# q0 = ds['train'].shuffle().select(range(10))['question']
-loop = 10
-document_count = 100
-ds = pymongo.MongoClient('10.48.48.7', 27017)['QA']['backup_collection']
-q0 =list(ds.find({'language':'en'},{'_id':0,'question':1}))
-q0 = random.sample(q0, document_count)
-q0 = [q['question'] for q in q0]
-pd.DataFrame(q0).to_csv('q0.csv')
-
+model_checkpoint = "/public/model/chatglm3-6b/"
+loop = 3
+document_count = 5
+evaluation_data =pd.read_csv('q0.csv')['0'].tolist()[:document_count]
+# q0 = random.sample(q0, document_count)
+# evalution_data = [q['question'] for q in q0]
 # print(q0[:2])
 language = 'en'
 writed_database = pymongo.MongoClient('10.48.48.7', 27017)['llm_evaluation']['test']
 model = AutoModel.from_pretrained(model_checkpoint,trust_remote_code=True).half().to(device)
-tokenizer = AutoTokenizer.from_pretrained(model_checkpoint,trust_remote_code=True)
-questions, answers = recall_qas(q0,model,loop,language)
-for i in range(len(questions)):
-    # print(f'question: {questions[i]}')
-    # print(f'answer: {answers[i]}')
-    # print('----------------------')
-    rerord = {'model':'chatglm-6b','language':language,'question':questions[i],'answer':answers[i],'loop':loop}
-    writed_database.insert_one(rerord)
-print("score for the oringinal question:")
-for i in range(loop):
-    predictions = [answer[0] for answer in answers]
-    references = [answer[i] for answer in answers]
-    # predictions = [" ".join(pred.replace(" ", "")) for pred in predictions]
-    # references = [" ".join(label.replace(" ", "")) for label in references]
-    results = rouge.compute(predictions=predictions,references=references)
-    print(f"loop{i}:{results}")
-    results_df = pd.DataFrame(results)
-
-    # Save DataFrame to CSV file
-    results_df.to_csv('results_0.csv', index=False)
-print("score for the last question:")
-for i in range(1,loop):
-    predictions = [answer[i-1] for answer in answers]
-    references = [answer[i] for answer in answers]
-    # predictions = [" ".join(pred.replace(" ", "")) for pred in predictions]
-    # references = [" ".join(label.replace(" ", "")) for label in references]
-    results = rouge.compute(predictions=predictions,references=references)
-    print(f"loop{i}:{results}")
-    # Convert results to DataFrame
-    results_df = pd.DataFrame(results)
-
-    # Save DataFrame to CSV file
-    results_df.to_csv('results_n.csv', index=False)
+tokenizer = AutoTokenizer.from_pretrained(model_checkpoint,device_map='auto',trust_remote_code=True)
+evalutaion = Evaluation(model,tokenizer,'chatglm-6b',evaluation_data,language,device,writed_database)
+evalutaion.evaluate(chatglm3_ask,loop)
+evalutaion.get_score()
+os.environ.pop('HTTP_PROXY', None)
+os.environ.pop('HTTPS_PROXY', None)
+print('HTTP_PROXY:', os.environ.get('HTTP_PROXY'))
