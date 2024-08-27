@@ -1,5 +1,6 @@
 import evaluate
 from tqdm import tqdm
+import pandas as pd
 
 
 class Evaluation:
@@ -15,7 +16,7 @@ class Evaluation:
         self.quesitons = None
         self.answers = None
         self.loop = loop
-        self.score = None
+        self.scores = []
    
     
     def recall_qa(self,ask,q0):
@@ -44,23 +45,43 @@ class Evaluation:
                 answer_records.append(answers)
             return question_records, answer_records
             
+            
     def evalutate(self,ask):
         self.quesitons,self.answers = self.recall_qas(ask)
         return self.quesitons,self.answers
 
-    def get_score(self):
+
+    def get_score(self,mode = 'answer'):
+        if mode == 'answer':
+            records = self.answers
+        elif mode == 'question':
+            records = self.quesitons
+        else:
+            raise ValueError('mode should be answer or question')
         for i in range(self.loop):
-            predictions = [answer[0] for answer in self.answers]
-            references = [answer[i] for answer in self.answers]
-            scores = self.metric.compute(predictions=predictions,references=references)
-            print(f"loop{i}:{scores}")
+            predictions = [record[0] for record in records]
+            references = [record[i] for record in records]
+            score = self.metric.compute(predictions=predictions,references=references)
+            score.update({'loop':i,"refer":"0","mode":mode})
+            self.scores.append(score)
+            print(f"loop{i}:{score}")
         for i in range(1,self.loop):
             predictions = [answer[i-1] for answer in self.answers]
             references = [answer[i] for answer in self.answers]
-            scores = self.metric.compute(predictions=predictions,references=references)
-            print(f"loop{i}:{scores}")
+            score = self.metric.compute(predictions=predictions,references=references)
+            score.update({'loop':i,"refer":"n-1","mode":mode})
+            self.scores.append(score)
+            print(f"loop{i}:{score}")
+
+        
+    
+    def write_scores_to_csv(self):
+        df = pd.DataFrame(self.scores)
+        df.to_csv(f'{self.model_name}_scores.csv', index=False)
+
 
     def write2db(self):
         for i in range(self.loop):
             rerord = {'model':self.model_name,'language':self.language,'question':self.quesitons[i],'answer':self.answers[i],'loop':self.loop}
             self.database.insert_one(rerord)
+        
