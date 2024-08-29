@@ -22,13 +22,15 @@ def llama_ask(model, tokenizer, deivce, question):
 
 def main():
     set_proxy()
-    device = "auto"
     rouge = evaluate.load("rouge")
+    device = "auto"
     loop = 10
     document_count = 100
-    evaluation_data = pd.read_csv("q0.csv")["0"].tolist()[:document_count]
+    field = 'medical'
+    model_name = 'llama3.1-8b'
+    evaluation_data = pd.read_csv(f"data/data_{field}.csv")["question"].tolist()[:document_count]
     language = "en"
-    writed_database = pymongo.MongoClient("10.48.48.7", 27017)["llm_evaluation"]["llama3.1-8b"]
+    writed_database = pymongo.MongoClient("10.48.48.7", 27017)["llm_evaluation"][f"{model_name}_{field}"]
     model_id = "/public/model/Meta-Llama-3.1-8B/"
     model = AutoModelForCausalLM.from_pretrained(model_id, device_map="auto").half()
     tokenizer = AutoTokenizer.from_pretrained(model_id)
@@ -36,16 +38,19 @@ def main():
         model=model,
         tokenizer=tokenizer,
         metric=rouge,
-        model_name="llama3.1-8b",
+        model_name=model_name,
         evaluation_data=evaluation_data,
         language=language,
         device=device,
         backup_db=writed_database,
         loop=loop,
+        task=field
     )
     evalutaion.evalutate(llama_ask)
     evalutaion.get_score('answer')
     evalutaion.get_score('question')
+    evalutaion.write2db()
+    evalutaion.write_scores_to_csv()
     close_proxy()
 
 

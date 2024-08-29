@@ -4,7 +4,7 @@ import pandas as pd
 
 
 class Evaluation:
-    def __init__(self, model,tokenizer,metric,model_name, evaluation_data, loop,language,device,backup_db):
+    def __init__(self, model,tokenizer,metric,model_name, evaluation_data, loop,language,task,device,backup_db):
         self.model_name = model_name
         self.device = device
         self.language = language
@@ -17,6 +17,7 @@ class Evaluation:
         self.answers = None
         self.loop = loop
         self.scores = []
+        self.task = task
    
     
     def recall_qa(self,ask,q0):
@@ -77,11 +78,11 @@ class Evaluation:
     
     def write_scores_to_csv(self):
         df = pd.DataFrame(self.scores)
-        df.to_csv(f'{self.model_name}_scores.csv', index=False)
+        df.to_csv(f'score/{self.model_name}_{self.task}_scores.csv', index=False)
 
 
     def write2db(self):
         for i in range(self.loop):
-            rerord = {'model':self.model_name,'language':self.language,'question':self.quesitons[i],'answer':self.answers[i],'loop':self.loop}
+            rerord = {'model':self.model_name,'language':self.language,'question':self.quesitons[i],'answer':self.answers[i],'loop':self.loop,'task':self.task}
             self.database.insert_one(rerord)
         
