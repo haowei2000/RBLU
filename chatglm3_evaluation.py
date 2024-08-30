@@ -16,33 +16,40 @@ def chatglm3_ask(model,tokenizer,device,question)->str:
 
 def main():
     set_proxy()
-    device = "auto"
     rouge = evaluate.load("rouge")
-    loop = 10
-    document_count = 100
-    evaluation_data = pd.read_csv("q0.csv")["0"].tolist()[:document_count]
+    device = "auto"
+    loop = 2
+    document_count = 2
+    model_name = 'chatglm3-6b'
     language = "en"
-    writed_database = pymongo.MongoClient("10.48.48.7", 27017)["llm_evaluation"]["chatglm3-6b"]     
-    model_checkpoint = "/public/model/chatglm3-6b/"
-    model = AutoModelForCausalLM.from_pretrained(model_checkpoint, device_map="auto",trust_remote_code=True)
-    tokenizer = AutoTokenizer.from_pretrained(model_checkpoint, trust_remote_code=True)
-    evalutaion = Evaluation(
-        model=model,
-        tokenizer=tokenizer,
-        metric=rouge,
-        model_name="chatglm3",
-        evaluation_data=evaluation_data,
-        language=language,
-        device=device,
-        backup_db=writed_database,
-        loop=loop,
-    )
-    evalutaion.evalutate(chatglm3_ask)
-    evalutaion.get_score()
-    evalutaion.write_scores_to_csv()
-    evalutaion.write2db()
+    model_id = "/public/model/chatglm3-6b/"
+    model = AutoModelForCausalLM.from_pretrained(model_id, device_map="auto",trust_remote_code=True).half()
+    tokenizer = AutoTokenizer.from_pretrained(model_id,trust_remote_code=True)
+    for field in ['code','finance','medical','law']:
+        evaluation_data = pd.read_csv(f"data/data_{field}.csv")["question"].tolist()[:document_count]
+        writed_database = pymongo.MongoClient("10.48.48.7", 27017)["llm_evaluation"][f"{model_name}_{field}"]
+        evalutaion = Evaluation(
+            model=model,
+            tokenizer=tokenizer,
+            metric=rouge,
+            model_name=model_name,
+            evaluation_data=evaluation_data,
+            language=language,
+            device=device,
+            backup_db=writed_database,
+            loop=loop,
+            task=field,
+            q_extractor=None,
+            a_extractor=None
+        )
+        evalutaion.evalutate(chatglm3_ask)
+        evalutaion.write_qa2db()
+        # print(evalutaion.questions)
+        # print(evalutaion.answers)
+        evalutaion.get_score('answer')
+        evalutaion.get_score('question')
+        evalutaion.write_scores_to_csv()
     close_proxy()
-
 
 
 if __name__ == "__main__":
