@@ -1,13 +1,15 @@
-# It looks like you have defined a class `Record` and a class `Chat` along with a class `Evaluation`
-# in your Python code. The `Record` class is used to save a record in the evaluation process, the
-# `Chat` class is used for interacting with a language model, and the `Evaluation` class is the main
-# class for evaluating a Language Model.
-from tqdm import tqdm
-import pandas as pd
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
-import re
+'''
+The `Record` class is used to save a record in the evaluation process,
+the Chat` class is used for interacting with a language model,
+and the `Evaluation` class is the mainclass for evaluating a Language Model.
+'''
 import dataclasses
+import re
+import pandas as pd
+import torch
+from tqdm import tqdm
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
 
 # it provides a default function to extract the question from a raw string
 def default_question_extractor(question: str) -> str:
@@ -40,9 +42,14 @@ def default_answer_extractor(answer: str) -> str:
     """
     return answer
 
+
 # it is 1 record to save the question, answer and result in the evaluation process
 @dataclasses.dataclass
 class Record:
+    """
+    1 record in LLM evaluation
+    """
+
     def __init__(
         self,
         original_question,
@@ -68,7 +75,8 @@ class Record:
         Generates a list of questions and answers based on a given initial question.
 
         Args:
-            ask (function): A function that takes a model, tokenizer, device, and a question as input and returns an answer.
+            ask (function): A function that takes a model, tokenizer, device, and a question
+            as input and returns an answer.
             q0 (str): The initial question.
 
         Returns:
@@ -86,17 +94,49 @@ class Record:
             new_question = self.question_extractor(new_question)
             self.questions_loop.append(new_question)
 
+
 @dataclasses.dataclass
 class Chat:
+    """
+    a special chat class for llm evaluation
+    """
+
     def __init__(self, model_checkpoint) -> None:
+        """
+        Initializes an instance of the Evaluation class.
+
+        Args:
+            model_checkpoint (str): The path or identifier of the pre-trained model checkpoint.
+
+        Returns:
+            None
+        """
         self.model = AutoModelForCausalLM.from_pretrained(
             model_checkpoint, device_map="auto", torch_dtype=torch.bfloat16
         )
         self.tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
         self.device = "cuda"
 
-    def ask(self, input):
-        input_ids = self.tokenizer(input, return_tensors="pt").to(self.device)
+    def ask(self, input_text: str):
+        """
+        Generates a response based on the given input.
+
+        Parameters:
+        - input (str): The input text to generate a response for.
+
+        Returns:
+        - str: The generated response.
+
+        Raises:
+        - None
+
+        Example:
+        ```
+        response = ask("Hello, how are you?")
+        print(response)
+        ```
+        """
+        input_ids = self.tokenizer(input_text, return_tensors="pt").to(self.device)
         outputs = self.model.generate(
             **input_ids,
             max_new_tokens=512,
@@ -107,9 +147,10 @@ class Chat:
 
 
 class Evaluation:
-    '''
+    """
     a main class to evaluation the LLM
-    '''
+    """
+
     def __init__(
         self,
         model_checkpoint,
@@ -128,7 +169,7 @@ class Evaluation:
         self.answers_list = []
         self.scores = []
         self.question_prompt = "What is the most likely question for this answer:"
-        self.answer_prompt = ''
+        self.answer_prompt = ""
         if q_extractor is None:
             self.q_extractor = default_question_extractor
         else:
@@ -167,7 +208,7 @@ class Evaluation:
             self.questions_list.append(record.questions_loop)
             self.answers_list.append(record.answers_loop)
 
-    def get_score(self, mode:str="answer"):
+    def get_score(self, mode: str = "answer"):
         """
         Calculate the score based on the given mode.
 
@@ -201,7 +242,7 @@ class Evaluation:
             self.scores.append(score)
             print(f"loop{i}:{score}")
 
-    def load_qa(self, questions:list[list], answers:list[list]):
+    def load_qa(self, questions: list[list], answers: list[list]):
         """
         Load a list of questions and answers into the object.
 
@@ -215,7 +256,7 @@ class Evaluation:
         self.questions_list = questions
         self.answers_list = answers
 
-    def write_scores_to_csv(self, task:str):
+    def write_scores_to_csv(self, task: str):
         """
         Write the scores to a CSV file.
 
@@ -240,7 +281,7 @@ class Evaluation:
         """
         records = []
         if database is not None:
-            for i in range(self.original_questions):
+            for i in range(len(self.original_questions)):
                 record = {
                     "model": self.model_checkpoint,
                     "question": self.questions_list[i],
