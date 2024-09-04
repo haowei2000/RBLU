@@ -16,7 +16,7 @@ def qwen_ask(model, tokenizer, device, question):
         tokenize=False,
         add_generation_prompt=True,
     )
-    model_inputs = tokenizer([text], return_tensors="pt").to(device)
+    model_inputs = tokenizer([text], return_tensors="pt").to('cuda')
 
     # Directly use generate() and tokenizer.decode() to get the output.
     # Use `max_new_tokens` to control the maximum output length.
@@ -42,33 +42,37 @@ def main():
     set_proxy()
     device = "auto"
     rouge = evaluate.load("rouge")
-    model_checkpoint = "/public/model/Qwen2-7B/"
     loop = 10
     document_count = 100
-    evaluation_data = pd.read_csv("q0.csv")["0"].tolist()[:document_count]
+    model_name = 'qwen2-7b'
     language = "en"
-    writed_database = pymongo.MongoClient("10.48.48.7", 27017)["llm_evaluation"]["test"]
-    model = AutoModelForCausalLM.from_pretrained(
-        model_checkpoint,
-        torch_dtype="auto",
-        device_map="auto",
-    )
-    tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
-    # model = AutoModel.from_pretrained(model_checkpoint,trust_remote_code=True).half().to(device)
-    # tokenizer = AutoTokenizer.from_pretrained(model_checkpoint,trust_remote_code=True)
-    evalutaion = Evaluation(
-        model=model,
-        tokenizer=tokenizer,
-        metric=rouge,
-        model_name="qwem2-7b",
-        evaluation_data=evaluation_data,
-        language=language,
-        device='cuda',
-        backup_db=writed_database,
-        loop=loop,
-    )
-    evalutaion.evalutate(qwen_ask)
-    evalutaion.get_score()
+    model_id = "/public/model/Qwen2-7B/"
+    model = AutoModelForCausalLM.from_pretrained(model_id, device_map="auto",trust_remote_code=True).half()
+    tokenizer = AutoTokenizer.from_pretrained(model_id,trust_remote_code=True)
+    for field in ['code','finance','medical','law']:
+        evaluation_data = pd.read_csv(f"data/data_{field}.csv")["question"].tolist()[:document_count]
+        writed_database = pymongo.MongoClient("10.48.48.7", 27017)["llm_evaluation"][f"{model_name}_{field}"]
+        evalutaion = Evaluation(
+            model=model,
+            tokenizer=tokenizer,
+            metric=rouge,
+            model_name=model_name,
+            original_questions=evaluation_data,
+            language=language,
+            device=device,
+            backup_db=writed_database,
+            loop=loop,
+            task=field,
+            q_extractor=None,
+            a_extractor=None
+        )
+        evalutaion.evaluate(qwen_ask)
+        evalutaion.write_qa2db()
+        # print(evalutaion.questions)
+        # print(evalutaion.answers)
+        evalutaion.get_score('answer')
+        evalutaion.get_score('question')
+        evalutaion.write_scores_to_csv()
     close_proxy()
     
 

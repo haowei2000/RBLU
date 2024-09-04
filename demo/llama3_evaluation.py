@@ -19,7 +19,7 @@ def main():
     set_proxy()
     rouge = evaluate.load("rouge")
     device = "auto"
-    loop = 5
+    loop = 10
     document_count = 100
     model_name = 'llama3.1-8b'
     language = "en"
@@ -34,7 +34,7 @@ def main():
             tokenizer=tokenizer,
             metric=rouge,
             model_name=model_name,
-            evaluation_data=evaluation_data,
+            original_questions=evaluation_data,
             language=language,
             device=device,
             backup_db=writed_database,
@@ -43,13 +43,13 @@ def main():
             q_extractor=None,
             a_extractor=None
         )
-        evalutaion.evalutate(llama_ask)
-        # evalutaion.write2db()
-        print(evalutaion.questions)
-        print(evalutaion.answers)
+        evalutaion.evaluate(llama_ask)
+        evalutaion.write_qa2db()
+        # print(evalutaion.questions)
+        # print(evalutaion.answers)
         evalutaion.get_score('answer')
         evalutaion.get_score('question')
-        # evalutaion.write_scores_to_csv()
+        evalutaion.write_scores_to_csv()
     close_proxy()
 
 

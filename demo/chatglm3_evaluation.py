@@ -1,12 +1,11 @@
 
 import pymongo
-from transformers import AutoTokenizer, AutoModel,AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
 # from datasets import load_dataset
 import evaluate
 import pandas as pd
 from evaluation import Evaluation
 from proxy import close_proxy, set_proxy
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Instead of using model.chat(), we directly use model.generate()
 # But you need to use tokenizer.apply_chat_template() to format your inputs as shown below
@@ -18,8 +17,8 @@ def main():
     set_proxy()
     rouge = evaluate.load("rouge")
     device = "auto"
-    loop = 2
-    document_count = 2
+    loop = 10
+    document_count = 100
     model_name = 'chatglm3-6b'
     language = "en"
     model_id = "/public/model/chatglm3-6b/"
@@ -33,7 +32,7 @@ def main():
             tokenizer=tokenizer,
             metric=rouge,
             model_name=model_name,
-            evaluation_data=evaluation_data,
+            original_questions=evaluation_data,
             language=language,
             device=device,
             backup_db=writed_database,
@@ -42,7 +41,7 @@ def main():
             q_extractor=None,
             a_extractor=None
         )
-        evalutaion.evalutate(chatglm3_ask)
+        evalutaion.evaluate(chatglm3_ask)
         evalutaion.write_qa2db()
         # print(evalutaion.questions)
         # print(evalutaion.answers)
