@@ -6,6 +6,12 @@ import evaluate
 from evaluation import Evaluation
 from proxy import set_proxy, close_proxy
 
+model_pool = [
+    '/public/model/hub/llm-research/meta-llama-3-8b-instruct',
+    '/public/model/hub/qwen/qwen2-7b-instruct',
+    '/public/model/gemma-2-9b',
+    '/public/model/glm-4-9b-chat'
+]
 
 def main():
     """
@@ -23,11 +29,11 @@ def main():
     Returns:
     None
     """
-    model_checkpoint = "/public/model/Meta-Llama-3.1-8B/"
+    model_checkpoint = model_pool[0]
     set_proxy()
     rouge = evaluate.load("rouge")
-    loop = 4
-    document_count = 10
+    loop = 5
+    document_count = 2
     field = "code"
     for field in ["code", "medical", "finance", "law"]:
         original_questions = pd.read_csv(f"./data/{field}_25_150.csv")[
@@ -38,13 +44,18 @@ def main():
             metric=rouge,
             original_questions=original_questions,
             loop=loop,
+            process=None
         )
         llama_evaluation.loop_evaluation()
         llama_evaluation.get_score("answer")
-        database = pymongo.MongoClient("10.48.48.7", 27017)["llm_evaluation"][
-            f"{model_checkpoint}_{field}"
-        ]
-        llama_evaluation.write_qa2db(database)
+        print(llama_evaluation.result.questions)
+        for document in range(len(llama_evaluation.result.questions)):
+            print(f'document{document}')
+            print(llama_evaluation.result.questions[document])
+        # database = pymongo.MongoClient("10.48.48.7", 27017)["llm_evaluation"][
+        #     f"{model_checkpoint}_{field}"
+        # ]
+        # llama_evaluation.write_qa2db(database)
     close_proxy()
 
 
