@@ -1,4 +1,4 @@
-""" a evaluation module for LLAMA3.1 evaluation """
+"""a evaluation module for LLAMA3.1 evaluation"""
 
 import pandas as pd
 import pymongo
@@ -20,6 +20,7 @@ def main():
 
     Parameters:
     None
+
     Returns:
     None
     """
@@ -37,13 +38,13 @@ def main():
     model_checkpoint = model_pool[1]
     model_name = model_checkpoint.rsplit("/", maxsplit=1)[-1]
     print(model_name)
-    loop = 3
-    document_count = 2
+    loop = 10
+    document_count = 100
     field = "code"
     for field in ["code", "medical", "finance", "law"]:
-        original_questions = pd.read_csv(f"./data/{field}_25_150.csv")["question"].tolist()[
-            :document_count
-        ]
+        original_questions = pd.read_csv(f"./data/{field}_25_150.csv")[
+            "question"
+        ].tolist()[:document_count]
         evaluation = Evaluation(
             model_checkpoint=model_checkpoint,
             metric_compute=rouge_and_bert,

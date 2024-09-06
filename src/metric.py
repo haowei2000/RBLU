@@ -6,7 +6,6 @@ when encoding large text collections.
 
 from sentence_transformers import SentenceTransformer
 import evaluate
-from proxy import set_proxy, close_proxy
 
 def bert_score(predictions, references):
     """
@@ -48,10 +47,11 @@ def rouge_and_bert(predictions: list[str], references: list[str]) -> dict:
 
 # Important, you need to shield your code with if __name__.
 # Otherwise, CUDA runs into issues when spawning new processes.
-if __name__ == "__main__":
-    set_proxy()
-    score = rouge_and_bert(
-        ["Hello, how are you?", "The weather is nice today."], ["Hi, how are you?", "It is sunny."]
-    )
-    print(score)
-    close_proxy()
+# if __name__ == "__main__":
+#     from proxy import set_proxy, close_proxy
+#     set_proxy()
+#     score = rouge_and_bert(
+#         ["Hello, how are you?", "The weather is nice today."], ["Hi, how are you?", "It is sunny."]
+#     )
+#     print(score)
+#     close_proxy()

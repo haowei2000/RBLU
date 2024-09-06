@@ -1,7 +1,7 @@
 """
 The `Record` class is used to save a record in the evaluation process,
 the Chat` class is used for interacting with a language model,
-and the `Evaluation` class is the mainclass for evaluating a Language Model.
+and the `Evaluation` class is the main class for evaluating a Language Model.
 """
 
 import dataclasses
