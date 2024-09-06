@@ -50,7 +50,7 @@ def load_field(
     df.drop_duplicates(subset="question", inplace=True)
     df = df.sample(n=count, random_state=42)
     df.to_csv(f"./data/{field}_{min_length}_{max_length}.csv", index=False)
-    return df
+    return df['question'].to_list()
 
 
 def plot_string_length_distribution(data: pd.DataFrame, key: str) -> None:

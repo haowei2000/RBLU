@@ -7,11 +7,11 @@ and the `Evaluation` class is the mainclass for evaluating a Language Model.
 import dataclasses
 import re
 from typing import Callable
+import datetime
 import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
-
 
 # it provides a default function to extract the question from a raw string
 def default_question_extractor(question: str) -> str:
@@ -56,7 +56,7 @@ def default_question_template(question: str) -> list:
     list: A list of messages representing the template, with a system message and a user message.
     """
     messages = [
-        {"role": "system", "content": "You are a chatbot who can answer the question"},
+        # {"role": "system", "content": "You are a chatbot who can answer the question"},
         {"role": "user", "content": f"{question}"},
     ]
     return messages
@@ -73,10 +73,10 @@ def default_answer_template(answer: str) -> list:
     list: A list of messages representing the default answer template. Each message is a dictionary with 'role' and 'content' keys.
     """
     messages = [
-        {
-            "role": "system",
-            "content": "You are a chatbot capable of guessing questions based on answers.",
-        },
+        # {
+        #     "role": "system",
+        #     "content": "You are a chatbot capable of guessing questions based on answers.",
+        # },
         {"role": "user", "content": f"What is the most likely question for this answer:{answer}"},
     ]
     return messages
@@ -101,7 +101,7 @@ class Chat:
     a special chat class for llm evaluation
     """
 
-    def __init__(self, model_checkpoint) -> None:
+    def __init__(self, model_checkpoint,gen_kwargs=None) -> None:
         """
         Initializes an instance of the Evaluation class.
 
@@ -111,12 +111,18 @@ class Chat:
         Returns:
             None
         """
-        
         self.model = AutoModelForCausalLM.from_pretrained(
-            model_checkpoint, device_map="auto", torch_dtype=torch.bfloat16
-        )
-        self.tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+            model_checkpoint,
+            device_map="auto",
+            torch_dtype=torch.bfloat16,
+            trust_remote_code=True,
+        ).eval()
+        self.tokenizer = AutoTokenizer.from_pretrained(model_checkpoint, trust_remote_code=True)
         self.device = "cuda"
+        if gen_kwargs is None:
+            self.gen_kwargs = {"max_new_tokens": 256}
+        else:
+            self.gen_kwargs = gen_kwargs
 
     def ask(self, messages: list):
         """
@@ -136,25 +142,36 @@ class Chat:
         response = ask("Hello, how are you?")
         ```
         """
-        text = self.tokenizer.apply_chat_template(
+        # self.model = deepspeed.init_inference(
+        #     self.model,
+        #     tensor_parallel={"tp_size": 2},
+        #     dtype=torch.half,
+        #     checkpoint=None,
+        #     replace_with_kernel_inject=True
+        # )
+        model_inputs = self.tokenizer.apply_chat_template(
             messages,
-            tokenize=False,
+            tokenize=True,
             add_generation_prompt=True,
+            return_tensors="pt",
+            return_dict=True
         )
-        model_inputs = self.tokenizer([text], return_tensors="pt").to(self.device)
+        model_inputs["input_ids"] = model_inputs["input_ids"].to(self.device)
+        model_inputs["attention_mask"] = model_inputs["attention_mask"].to(self.device)
 
         # Directly use generate() and tokenizer.decode() to get the output.
         # Use `max_new_tokens` to control the maximum output length.
-        generated_ids = self.model.generate(
-            model_inputs.input_ids,
-            max_new_tokens=512,
-        )
-        generated_ids = [
-            output_ids[len(input_ids) :]
-            for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
-        ]
+        with torch.no_grad():
+            generated_ids = self.model.generate(
+                **model_inputs,
+                **self.gen_kwargs
+            )
+            generated_ids = [
+                output_ids[len(model_inputs.input_ids[i]) :]
+                for i, output_ids in enumerate(generated_ids)
+            ]
 
-        response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+            response = self.tokenizer.decode(generated_ids[0], skip_special_tokens=True)
         return response
         # input_ids = self.tokenizer.apply_chat_template(input_text, return_tensors="pt").to(self.device)
         # outputs = self.model.generate(
@@ -227,14 +244,16 @@ class Evaluation:
     def __init__(
         self,
         model_checkpoint,
-        metric,
+        metric_compute,
         original_questions,
         loop,
         process,
+        chat=None,
     ):
         self.model_checkpoint = model_checkpoint
-        self.chat = Chat(model_checkpoint)
-        self.metric = metric
+        if chat is None:
+            self.chat = Chat(model_checkpoint)
+        self.metric_compute = metric_compute
         self.original_questions = original_questions
         self.loop = loop
         if process is None:
@@ -246,7 +265,7 @@ class Evaluation:
             )
         else:
             self.process = process
-        self.result = Result([],[],[])
+        self.result = Result([], [], [])
 
     def loop_evaluation(self):
         """
@@ -293,16 +312,16 @@ class Evaluation:
             records = self.result.questions
         else:
             raise ValueError("mode should be answer or question")
-        for i in range(self.loop):
+        for i in range(1,self.loop):
             predictions = [record[0] for record in records]
             references = [record[i] for record in records]
-            score = self.metric.compute(predictions=predictions, references=references)
+            score = self.metric_compute(predictions=predictions, references=references)
             score.update({"loop": i, "refer": "0", "mode": mode})
             self.result.scores.append(score)
         for i in range(1, self.loop):
             predictions = [record[i - 1] for record in records]
             references = [record[i] for record in records]
-            score = self.metric.compute(predictions=predictions, references=references)
+            score = self.metric_compute(predictions=predictions, references=references)
             score.update({"loop": i, "refer": "n-1", "mode": mode})
             self.result.scores.append(score)
         return self.result.scores
@@ -321,7 +340,7 @@ class Evaluation:
         self.result.questions = questions
         self.result.answers = answers
 
-    def write_scores_to_csv(self, task: str):
+    def write_scores_to_csv(self, path: str):
         """
         Write the scores to a CSV file.
 
@@ -332,7 +351,7 @@ class Evaluation:
         - None
         """
         df = pd.DataFrame(self.result.scores)
-        df.to_csv(f"score/{self.model_checkpoint}_{task}_scores.csv", index=False)
+        df.to_csv(path, index=False)
 
     def write_qa2db(self, database):
         """
@@ -352,6 +371,7 @@ class Evaluation:
                     "question": self.result.questions[i],
                     "answer": self.result.answers[i],
                     "loop": self.loop,
+                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
                 database.insert_one(record)
                 records.append(record)

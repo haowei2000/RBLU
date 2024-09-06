@@ -1,0 +1,14 @@
+
+
+Loading checkpoint shards: 100%|██████████| 4/4 [00:04<00:00,  1.06s/it]
+
+100%|██████████| 2/2 [00:57<00:00, 28.64s/it]
+Traceback (most recent call last):
+  File "/workspace/project/llm_evaluation/src/main.py", line 67, in <module>
+    main()
+  File "/workspace/project/llm_evaluation/src/main.py", line 55, in main
+    llama_evaluation.get_score("answer")
+  File "/workspace/project/llm_evaluation/src/evaluation.py", line 318, in get_score
+    score = self.metric_compute(predictions=predictions, references=references)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'Rouge' object is not callable
