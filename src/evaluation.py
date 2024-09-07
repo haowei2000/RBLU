@@ -55,6 +55,7 @@ def default_answer_extractor(answer: str):
         str: The extracted value of 'a'.
     """
     answer = answer.replace("Assistant:", "", 1)
+    answer = answer.replace("assistant:", "", 1)
     return answer
 
 
@@ -265,6 +266,19 @@ class Result:
             self.scores_q_refer_n[i] = self.metric_compute(self.questions[i - 1], self.questions[i])
             self.scores_a_refer_0[i] = self.metric_compute(self.answers[0], self.answers[i])
             self.scores_a_refer_n[i] = self.metric_compute(self.answers[i - 1], self.answers[i])
+            df_q_refer_0 = pd.DataFrame(self.scores_q_refer_0)
+            df_q_refer_0['type'] = 'q_refer_0'
+            self.scores = df_q_refer_0
+            df_a_refer_0 = pd.DataFrame(self.scores_a_refer_0)
+            df_a_refer_0['type'] = 'a_refer_0'
+            df_q_refer_n = pd.DataFrame(self.scores_q_refer_n)
+            df_q_refer_n['type'] = 'q_refer_n'
+            df_a_refer_n = pd.DataFrame(self.scores_a_refer_n)
+            df_q_refer_n['type'] = 'a_refer_n'
+            self.scores = pd.concat([self.scores, df_a_refer_0, df_q_refer_n, df_a_refer_n], axis=0)
+    
+    def save_score(self,path:str):
+        self.scores.to_csv(path, index=False)
 
 class Evaluation:
     """
@@ -313,12 +327,12 @@ class Evaluation:
         for i in range(self.loop):
             print("Loop:", i)
             questions_list = self.process.batch_question_template(self.result.questions[i])
-            print(f'questions_list{i}:{questions_list}')
+            # print(f'questions_list{i}:{questions_list}')
             answers_list_output = self.chat.batch_generate_text(questions_list)
-            print(f'answers_list_output{i}:{answers_list_output}')
+            # print(f'answers_list_output{i}:{answers_list_output}')
             self.result.answers[i] = self.process.batch_answer_extract(answers_list_output)
             answers_list_input = self.process.batch_answer_template(self.result.answers[i])
-            print(f'answers_list_input{i}:{answers_list_input}')
+            # print(f'answers_list_input{i}:{answers_list_input}')
             new_question_list_output = self.chat.batch_generate_text(answers_list_input)
             if i < self.loop - 1:
                 self.result.questions[i + 1] = self.process.batch_question_extract(
@@ -350,6 +364,9 @@ class Evaluation:
     
     def get_score(self):
         self.result.get_score()
+    
+    def save_score(self,path):
+        self.result.save_score(path)
 
     # def write_qa2db(self, database):
     #     """

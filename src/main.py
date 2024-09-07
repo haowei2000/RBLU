@@ -68,6 +68,7 @@ def main():
         evaluation.get_score()
         print(evaluation.result.questions)
         print(evaluation.result.scores_q_refer_0)
+        print(evaluation.result.scores)
         # evaluation.write_scores_to_csv(path=f'../score{model_name}_{field}_scores.csv"')
         # database = pymongo.MongoClient("10.48.48.7", 27017)["llm_evaluation"][
         #     f"{model_checkpoint}_{field}"
