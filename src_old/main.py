@@ -9,7 +9,7 @@ from evaluation import Evaluation
 from proxy import set_proxy, close_proxy
 from metric import rouge_and_bert
 from dataload import load_field
-from process import default_template
+
 
 def main():
     """
@@ -40,10 +40,10 @@ def main():
         "/public/model/hub/AI-ModelScope/gemma-2-9b-it",
         "/public/model/hub/ZhipuAI/glm-4-9b-chat",
     ]
-    model_checkpoint = model_pool[0]
+    model_checkpoint = model_pool[1]
     model_name = model_checkpoint.rsplit("/", maxsplit=1)[-1]
     loop = 3
-    batch_size= 6
+    batch_size= 4
     document_count = 4
     model = AutoModelForCausalLM.from_pretrained(
         model_checkpoint,
@@ -54,7 +54,6 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(
         model_checkpoint, trust_remote_code=True, padding_side="left"  # Set padding side to 'left'
     )
-    tokenizer.pad_token = tokenizer.eos_token
     for field in ["medical","finance", "law"]: #, "medical", :
         print(f"{model_name}:{field}")
         original_questions = load_field(
@@ -66,26 +65,25 @@ def main():
             metric_compute=rouge_and_bert,
             original_questions=original_questions,
             batch_size=batch_size,
-            loop_count=loop,
+            loop=loop,
             document_count=document_count,
-            template=default_template,
+            apply_template=True,
+            process=None,
         )
         evaluation.loop_evaluation()
-        # evaluation.qa_dataset.to_json('records.json')
-        evaluation.qa_dataset.to_json(f'result/{model_name}_{field}_qa_dataset.json', orient='records', lines=True)
-        evaluation.qa_dataset.save_to_disk(f'result/{model_name}_{field}')
-        # evaluation.get_score()
-        # print(evaluation.result.scores)
-        # print("start to save the score")
-        # evaluation.save_score(path=f'./score/{model_name}_{field}_scores.csv"')
-        # current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-        # database = pymongo.MongoClient("10.48.48.7", 27017)["llm_evaluation"][
-        #     f"{model_name}_{field}_{current_time}"
-        # ]
-        # # evaluation.load_from_db(database)
-        # # print(evaluation.result.questions)
-        # print("start to save the QA")
-        # evaluation.write_qa2db(database)
+        print(evaluation.result.questions)
+        evaluation.get_score()
+        print(evaluation.result.scores)
+        print("start to save the score")
+        evaluation.save_score(path=f'./score/{model_name}_{field}_scores.csv"')
+        current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        database = pymongo.MongoClient("10.48.48.7", 27017)["llm_evaluation"][
+            f"{model_name}_{field}_{current_time}"
+        ]
+        # evaluation.load_from_db(database)
+        # print(evaluation.result.questions)
+        print("start to save the QA")
+        evaluation.write_qa2db(database)
     # wandb.finish()
     close_proxy()
 

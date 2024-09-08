@@ -1,0 +1,943 @@
+question,input,output,prompt,field
+Write a Python program to generate a virtual assistant for processing natural language queries.,Not applicable,"import sys
+import speech_recognition
+import time
+from gtts import gTTS
+from playsound import playsound
+import webbrowser
+import os
+import random
+
+def reg_and_speak(query):
+ 
+ query = query.lower()
+ # recognize speech using Google Speech Recognition
+ 
+ try:
+ # for testing purposes, we're just using the default API key
+ # to use another API key, use `r.recognize_google(audio, key=""GOOGLE_SPEECH_RECOGNITION_API_KEY"")`
+ # instead of `r.recognize_google(audio)`
+ text = r.recognize_google(audio)
+ print(text)
+    
+ except:
+ speech = ""I could not understand it""
+ speak(speech)
+ sys.exit()
+    
+ 
+ def speak(speech):
+ tts = gTTS(text=speech, lang='en', slow=False)
+ # save the file
+ tts.save(""speech.mp3"")
+ # play the mp3
+ playsound.playsound(""speech.mp3"", True)
+ os.remove('speech.mp3')
+ 
+ while True:
+ print('listening...')
+ speech_recognition.Microphone(device_index=1)
+ r.adjust_for_ambient_noise(source)
+ audio = r.listen(source)
+ reg_and_speak(audio)","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Write a Python program to generate a virtual assistant for processing natural language queries.
+
+### Input:
+Not applicable
+
+### Output:
+import sys
+import speech_recognition
+import time
+from gtts import gTTS
+from playsound import playsound
+import webbrowser
+import os
+import random
+
+def reg_and_speak(query):
+ 
+ query = query.lower()
+ # recognize speech using Google Speech Recognition
+ 
+ try:
+ # for testing purposes, we're just using the default API key
+ # to use another API key, use `r.recognize_google(audio, key=""GOOGLE_SPEECH_RECOGNITION_API_KEY"")`
+ # instead of `r.recognize_google(audio)`
+ text = r.recognize_google(audio)
+ print(text)
+    
+ except:
+ speech = ""I could not understand it""
+ speak(speech)
+ sys.exit()
+    
+ 
+ def speak(speech):
+ tts = gTTS(text=speech, lang='en', slow=False)
+ # save the file
+ tts.save(""speech.mp3"")
+ # play the mp3
+ playsound.playsound(""speech.mp3"", True)
+ os.remove('speech.mp3')
+ 
+ while True:
+ print('listening...')
+ speech_recognition.Microphone(device_index=1)
+ r.adjust_for_ambient_noise(source)
+ audio = r.listen(source)
+ reg_and_speak(audio)",code
+Design a function in Python to sort the given list of numbers in descending order.,"The given list of numbers is: [2, 4, 1, 6, 9, 8]","def descendingSort(nums):
+    # sort list in reverse order
+    nums.sort(reverse=True)
+    return nums
+
+print(descendingSort([2, 4, 1, 6, 9, 8]))","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Design a function in Python to sort the given list of numbers in descending order.
+
+### Input:
+The given list of numbers is: [2, 4, 1, 6, 9, 8]
+
+### Output:
+def descendingSort(nums):
+    # sort list in reverse order
+    nums.sort(reverse=True)
+    return nums
+
+print(descendingSort([2, 4, 1, 6, 9, 8]))",code
+Create a Python script that takes in two strings and returns a value representing their similarity.,"string1 = ""Hello World!""
+string2 = ""Goodbye World!""","def string_similarity(string1, string2):
+    # Create dictionary for storing character frequencies
+    char_freq_dict = dict()
+
+    for char in string1:
+        if char in char_freq_dict:
+            char_freq_dict[char] += 1
+        else:
+            char_freq_dict[char] = 1
+
+    # Count number of matching characters
+    matches = 0
+    for char in string2:
+        if char in char_freq_dict and char_freq_dict[char] > 0:
+            matches += 1
+            char_freq_dict[char] -= 1
+
+    # Calculate similarity
+    similarity = (matches/len(string1)) * 100
+
+    return similarity","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Create a Python script that takes in two strings and returns a value representing their similarity.
+
+### Input:
+string1 = ""Hello World!""
+string2 = ""Goodbye World!""
+
+### Output:
+def string_similarity(string1, string2):
+    # Create dictionary for storing character frequencies
+    char_freq_dict = dict()
+
+    for char in string1:
+        if char in char_freq_dict:
+            char_freq_dict[char] += 1
+        else:
+            char_freq_dict[char] = 1
+
+    # Count number of matching characters
+    matches = 0
+    for char in string2:
+        if char in char_freq_dict and char_freq_dict[char] > 0:
+            matches += 1
+            char_freq_dict[char] -= 1
+
+    # Calculate similarity
+    similarity = (matches/len(string1)) * 100
+
+    return similarity",code
+Create a Python program that can turn a regular text phrase into a hex encoded form.,Hello World,"def text_to_hex(text):
+    hex_encoded = """"
+    for i in text:
+        hex_encoded += ((hex(ord(i)))[2:]).zfill(2) 
+    return hex_encoded
+
+print(text_to_hex(""Hello World""))","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Create a Python program that can turn a regular text phrase into a hex encoded form.
+
+### Input:
+Hello World
+
+### Output:
+def text_to_hex(text):
+    hex_encoded = """"
+    for i in text:
+        hex_encoded += ((hex(ord(i)))[2:]).zfill(2) 
+    return hex_encoded
+
+print(text_to_hex(""Hello World""))",code
+Create a Python program that can encrypt a string using the RSA asymmetric algorithm.,,"# Imports
+from Crypto.PublicKey import RSA
+
+# Generate an RSA key pair
+key = RSA.generate(2048)
+
+# Retrieve the public key
+public_key = key.publickey()
+
+# Encrypt the message using the public key
+def encrypt_message(message):
+	encrypted_message = public_key.encrypt(message, 32)
+	return encrypted_message","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Create a Python program that can encrypt a string using the RSA asymmetric algorithm.
+
+### Input:
+
+
+### Output:
+# Imports
+from Crypto.PublicKey import RSA
+
+# Generate an RSA key pair
+key = RSA.generate(2048)
+
+# Retrieve the public key
+public_key = key.publickey()
+
+# Encrypt the message using the public key
+def encrypt_message(message):
+	encrypted_message = public_key.encrypt(message, 32)
+	return encrypted_message",code
+"Create a Python Django web application for a catalog, that includes a page with a list of the catalog items and a page to add/edit entries.",Not applicable,"# models.py
+
+from django.db import models
+
+class Item(models.Model):
+   name = models.CharField(max_length=50)
+    description = models.TextField()
+    price = models.FloatField()
+
+# urls.py
+
+from django.urls import path
+from catalog import views
+
+urlpatterns = [
+    path('list', views.item_list, name='item_list'),
+    path('add-edit', views.add_edit_item, name='add_edit_item'),
+
+]
+
+# views.py
+
+from django.shortcuts import render
+from catalog.models import Item
+
+def item_list(request):
+    items = Item.objects.all()
+    context = {'items': items}
+    return render(request, 'catalog/item_list.html', context)
+
+def add_edit_item(request):
+    return render(request, 'catalog/add_edit_item.html', {})","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Create a Python Django web application for a catalog, that includes a page with a list of the catalog items and a page to add/edit entries.
+
+### Input:
+Not applicable
+
+### Output:
+# models.py
+
+from django.db import models
+
+class Item(models.Model):
+   name = models.CharField(max_length=50)
+    description = models.TextField()
+    price = models.FloatField()
+
+# urls.py
+
+from django.urls import path
+from catalog import views
+
+urlpatterns = [
+    path('list', views.item_list, name='item_list'),
+    path('add-edit', views.add_edit_item, name='add_edit_item'),
+
+]
+
+# views.py
+
+from django.shortcuts import render
+from catalog.models import Item
+
+def item_list(request):
+    items = Item.objects.all()
+    context = {'items': items}
+    return render(request, 'catalog/item_list.html', context)
+
+def add_edit_item(request):
+    return render(request, 'catalog/add_edit_item.html', {})",code
+Create a class in Python to manage the expiry dates of products.,,"class ProductExpiry:
+    def __init__(self, product_id, expiry_date):
+        self.product_id = product_id
+        self.expiry_date = expiry_date
+
+    def is_expired(self):
+        """"""Returns True if the product has passed its expiry date, False otherwise""""""
+        return datetime.now() > self.expiry_date
+    
+    def get_time_left(self):
+        """"""Returns the number of days left before the product expires""""""
+        time_left = (self.expiry_date - datetime.now())
+        days_left = time_left.days
+        return days_left","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Create a class in Python to manage the expiry dates of products.
+
+### Input:
+
+
+### Output:
+class ProductExpiry:
+    def __init__(self, product_id, expiry_date):
+        self.product_id = product_id
+        self.expiry_date = expiry_date
+
+    def is_expired(self):
+        """"""Returns True if the product has passed its expiry date, False otherwise""""""
+        return datetime.now() > self.expiry_date
+    
+    def get_time_left(self):
+        """"""Returns the number of days left before the product expires""""""
+        time_left = (self.expiry_date - datetime.now())
+        days_left = time_left.days
+        return days_left",code
+Create a Python script to find the maximum and minimum values for each sublist in a list,"[[8, 4], [6, 2, 3], [1, 9, 7]]","def findMinMax(list):
+    min_list = []
+    max_list = []
+    
+    for sublist in list: 
+        min_list.append(min(sublist)) 
+        max_list.append(max(sublist)) 
+    return min_list, max_list 
+
+list = [[8, 4], [6, 2, 3], [1, 9, 7]] 
+min_list, max_list = findMinMax(list) 
+
+print(""The min values of given sublist :"", min_list) 
+print(""The max values of given sublist :"", max_list) 
+
+# Output
+# The min values of given sublist : [4, 2, 1]
+#The max values of given sublist : [8, 6, 9]","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Create a Python script to find the maximum and minimum values for each sublist in a list
+
+### Input:
+[[8, 4], [6, 2, 3], [1, 9, 7]]
+
+### Output:
+def findMinMax(list):
+    min_list = []
+    max_list = []
+    
+    for sublist in list: 
+        min_list.append(min(sublist)) 
+        max_list.append(max(sublist)) 
+    return min_list, max_list 
+
+list = [[8, 4], [6, 2, 3], [1, 9, 7]] 
+min_list, max_list = findMinMax(list) 
+
+print(""The min values of given sublist :"", min_list) 
+print(""The max values of given sublist :"", max_list) 
+
+# Output
+# The min values of given sublist : [4, 2, 1]
+#The max values of given sublist : [8, 6, 9]",code
+Create a Python program for finding a given pattern in a given text.,"Text = ""This is a sample text.""
+Pattern = ""is""","def findPattern(text, pattern):
+    i=0
+    count=0
+    while i < len(text):
+        j = 0
+        if text[i] == pattern[j]:
+            k = i
+            while j < len(pattern) and k < len(text) and  text[k] == pattern[j]:
+                j+=1
+                k+=1
+            if j == len(pattern):
+                count+=1
+            i+=1
+        else:
+            i+=1
+    return count","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Create a Python program for finding a given pattern in a given text.
+
+### Input:
+Text = ""This is a sample text.""
+Pattern = ""is""
+
+### Output:
+def findPattern(text, pattern):
+    i=0
+    count=0
+    while i < len(text):
+        j = 0
+        if text[i] == pattern[j]:
+            k = i
+            while j < len(pattern) and k < len(text) and  text[k] == pattern[j]:
+                j+=1
+                k+=1
+            if j == len(pattern):
+                count+=1
+            i+=1
+        else:
+            i+=1
+    return count",code
+Your client has asked you to convert an existing Java program into a Python program. The Java program takes a list of integers and returns the maximum value.,"listOfIntegers = [1, 3, 8, 2, 9]","def get_max_value(listOfIntegers):
+ maxValue = listOfIntegers[0]
+ for num in listOfIntegers:
+ if num > maxValue:
+ maxValue = num
+ return maxValue
+
+print(get_max_value(listOfIntegers))","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Your client has asked you to convert an existing Java program into a Python program. The Java program takes a list of integers and returns the maximum value.
+
+### Input:
+listOfIntegers = [1, 3, 8, 2, 9]
+
+### Output:
+def get_max_value(listOfIntegers):
+ maxValue = listOfIntegers[0]
+ for num in listOfIntegers:
+ if num > maxValue:
+ maxValue = num
+ return maxValue
+
+print(get_max_value(listOfIntegers))",code
+Model a simple linear regression in Python using the Boston housing data.,"Boston house features:
+RM – average number of rooms per dwelling 
+LSTAT – % lower status of the population 
+PTRATIO – pupil-teacher ratio by town","import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Read Boston housing data in
+boston_df = pd.read_csv(
+    'https://raw.githubusercontent.com/PacktWorkshops/The-Data-Science-Workshop/master/Chapter02/Dataset/boston_house_prices.csv'
+)
+
+# Visualize data
+plt.style.use('ggplot')
+plt.scatter(boston_df.RM, boston_df.MEDV, color='black')
+plt.xlabel('Average number of rooms per dwelling (RM)')
+plt.ylabel('Median Value of Homes in $1000s (MEDV)')
+plt.title(""Modeling Simple Linear Regression in Boston Housing Data"")
+
+# Calculate regression line
+X = boston_df[['RM']]
+y = boston_df['MEDV']
+
+model = LinearRegression()
+model.fit(X, y)
+
+# Calculate predicted value
+predicted_MEDV = model.predict(X)
+
+# Plot regression line
+plt.plot(boston_df.RM, predicted_MEDV, color='blue', linewidth=2)
+plt.show()","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Model a simple linear regression in Python using the Boston housing data.
+
+### Input:
+Boston house features:
+RM – average number of rooms per dwelling 
+LSTAT – % lower status of the population 
+PTRATIO – pupil-teacher ratio by town
+
+### Output:
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Read Boston housing data in
+boston_df = pd.read_csv(
+    'https://raw.githubusercontent.com/PacktWorkshops/The-Data-Science-Workshop/master/Chapter02/Dataset/boston_house_prices.csv'
+)
+
+# Visualize data
+plt.style.use('ggplot')
+plt.scatter(boston_df.RM, boston_df.MEDV, color='black')
+plt.xlabel('Average number of rooms per dwelling (RM)')
+plt.ylabel('Median Value of Homes in $1000s (MEDV)')
+plt.title(""Modeling Simple Linear Regression in Boston Housing Data"")
+
+# Calculate regression line
+X = boston_df[['RM']]
+y = boston_df['MEDV']
+
+model = LinearRegression()
+model.fit(X, y)
+
+# Calculate predicted value
+predicted_MEDV = model.predict(X)
+
+# Plot regression line
+plt.plot(boston_df.RM, predicted_MEDV, color='blue', linewidth=2)
+plt.show()",code
+Develop a function in Python to convert an integer in base 10 to a string representing the number in binary.,x = 42,"def int_to_binary(x):
+ #initializing a variable to store the binary equivalent 
+ bin_str = ''
+
+ #looping until the value of x is 0 
+ while x > 0: 
+  # calculated the remainder 
+  remainder = x % 2 
+  #updating x 
+  x >>= 1 
+  
+  #adding the remainder to the string
+  bin_str += str(remainder) 
+  
+ #reversing the string 
+ bin_str = bin_str[::-1]
+
+ # return the binary string 
+ return bin_str","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Develop a function in Python to convert an integer in base 10 to a string representing the number in binary.
+
+### Input:
+x = 42
+
+### Output:
+def int_to_binary(x):
+ #initializing a variable to store the binary equivalent 
+ bin_str = ''
+
+ #looping until the value of x is 0 
+ while x > 0: 
+  # calculated the remainder 
+  remainder = x % 2 
+  #updating x 
+  x >>= 1 
+  
+  #adding the remainder to the string
+  bin_str += str(remainder) 
+  
+ #reversing the string 
+ bin_str = bin_str[::-1]
+
+ # return the binary string 
+ return bin_str",code
+"Write a function in Python to generate an N by N matrix, filled with random integers between 0 and 9",N = 5,"import random
+
+def generate_matrix(N):
+    matrix = []
+    for i in range(N):
+        row = []
+        for j in range(N):
+            row.append(random.randint(0, 9))
+        matrix.append(row)
+    return matrix","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Write a function in Python to generate an N by N matrix, filled with random integers between 0 and 9
+
+### Input:
+N = 5
+
+### Output:
+import random
+
+def generate_matrix(N):
+    matrix = []
+    for i in range(N):
+        row = []
+        for j in range(N):
+            row.append(random.randint(0, 9))
+        matrix.append(row)
+    return matrix",code
+Create a Python script to calculate the sum of the numbers in a list given as input.,"list = [1, 5, 10, 30]","def sum_list(list):
+    total = 0
+    for i in list:
+        total += i
+    return total
+
+print sum_list(list)","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Create a Python script to calculate the sum of the numbers in a list given as input.
+
+### Input:
+list = [1, 5, 10, 30]
+
+### Output:
+def sum_list(list):
+    total = 0
+    for i in list:
+        total += i
+    return total
+
+print sum_list(list)",code
+"Write a python program, taking a string input from the user, to reverse all the words in it.",Not applicable,"user_input = input('Please enter a string: ')
+ 
+words = user_input.split(' ')
+ 
+reverse_words = [word[::-1] for word in words]
+ 
+print(' '.join(reverse_words))","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Write a python program, taking a string input from the user, to reverse all the words in it.
+
+### Input:
+Not applicable
+
+### Output:
+user_input = input('Please enter a string: ')
+ 
+words = user_input.split(' ')
+ 
+reverse_words = [word[::-1] for word in words]
+ 
+print(' '.join(reverse_words))",code
+Create a basic web crawler using Python that searches for a given keyword in a website and prints the pages where it is found.,"Keyword: ""Python""
+Website: www.example.com","import requests
+from bs4 import BeautifulSoup
+
+# Given a keyword and a website URL
+def web_crawler(keyword, url):
+    # Make a request to the given URL
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    # Loop through the pages
+    visited = set()
+    while True:
+        # Get all the links on the page
+        links = soup.find_all('a')
+        for link in links:
+            # Get the absolute URL for the link
+            link_url = link.get('href')
+
+            # If the URL is already visited, continue
+            if link_url in visited:
+                continue
+
+            # If it is a valid URL, visit it
+            if link_url.startswith('http'):
+                visited.add(link_url)
+                response = requests.get(link_url)
+                soup = BeautifulSoup(response.content, 'html.parser')
+
+                # Search for the keyword in the page
+                if keyword in response.text:
+                    print(f'Found keyword ""{keyword}"" in URL: {link_url}')
+
+# Test
+keyword = 'Python'
+url = 'www.example.com'
+web_crawler(keyword, url)","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Create a basic web crawler using Python that searches for a given keyword in a website and prints the pages where it is found.
+
+### Input:
+Keyword: ""Python""
+Website: www.example.com
+
+### Output:
+import requests
+from bs4 import BeautifulSoup
+
+# Given a keyword and a website URL
+def web_crawler(keyword, url):
+    # Make a request to the given URL
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    # Loop through the pages
+    visited = set()
+    while True:
+        # Get all the links on the page
+        links = soup.find_all('a')
+        for link in links:
+            # Get the absolute URL for the link
+            link_url = link.get('href')
+
+            # If the URL is already visited, continue
+            if link_url in visited:
+                continue
+
+            # If it is a valid URL, visit it
+            if link_url.startswith('http'):
+                visited.add(link_url)
+                response = requests.get(link_url)
+                soup = BeautifulSoup(response.content, 'html.parser')
+
+                # Search for the keyword in the page
+                if keyword in response.text:
+                    print(f'Found keyword ""{keyword}"" in URL: {link_url}')
+
+# Test
+keyword = 'Python'
+url = 'www.example.com'
+web_crawler(keyword, url)",code
+Create an algorithm in Python that compares two lists of strings and returns only the strings that are found in both lists.,"list_one=[""apple"", ""banana"", ""carrot"", ""kiwi""]
+list_two=[""kiwi"", ""cucumber"", ""grape"", ""apple""]","def compare_lists(list_one, list_two):
+    """"""Compare two lists of strings and return a list containing strings found in both.""""""
+    result_list = []
+    for elem in list_one:
+        if elem in list_two:
+            result_list.append(elem)
+    return result_list
+
+list_one = [""apple"", ""banana"", ""carrot"", ""kiwi""]
+list_two = [""kiwi"", ""cucumber"", ""grape"", ""apple""]
+ 
+
+print(compare_lists(list_one, list_two))
+# Output: [""apple"", ""kiwi""]","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Create an algorithm in Python that compares two lists of strings and returns only the strings that are found in both lists.
+
+### Input:
+list_one=[""apple"", ""banana"", ""carrot"", ""kiwi""]
+list_two=[""kiwi"", ""cucumber"", ""grape"", ""apple""]
+
+### Output:
+def compare_lists(list_one, list_two):
+    """"""Compare two lists of strings and return a list containing strings found in both.""""""
+    result_list = []
+    for elem in list_one:
+        if elem in list_two:
+            result_list.append(elem)
+    return result_list
+
+list_one = [""apple"", ""banana"", ""carrot"", ""kiwi""]
+list_two = [""kiwi"", ""cucumber"", ""grape"", ""apple""]
+ 
+
+print(compare_lists(list_one, list_two))
+# Output: [""apple"", ""kiwi""]",code
+Write a code to generate a random 4-digit code in Python.,,"import random 
+
+def generate_code():
+    code = """"
+    for _ in range(4):
+        code += str(random.randint(0, 9))
+    return code
+
+code = generate_code()
+print(code)","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Write a code to generate a random 4-digit code in Python.
+
+### Input:
+
+
+### Output:
+import random 
+
+def generate_code():
+    code = """"
+    for _ in range(4):
+        code += str(random.randint(0, 9))
+    return code
+
+code = generate_code()
+print(code)",code
+Produce a regular expression pattern in Python that validates emails.,Not applicable,"import re
+
+def validate_email(email):
+  email_regex = r'^[\w\.-]+@[\w\.-]+\.\w{2,4}$'
+  return re.match(email_regex, email) != None","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Produce a regular expression pattern in Python that validates emails.
+
+### Input:
+Not applicable
+
+### Output:
+import re
+
+def validate_email(email):
+  email_regex = r'^[\w\.-]+@[\w\.-]+\.\w{2,4}$'
+  return re.match(email_regex, email) != None",code
+Design a Python code snippet that deletes all duplicates in a given list of numbers.,,"def deleteDuplicates(list): 
+    final_list = [] 
+    for num in list: 
+        if num not in final_list: 
+            final_list.append(num) 
+    return final_list","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Design a Python code snippet that deletes all duplicates in a given list of numbers.
+
+### Input:
+
+
+### Output:
+def deleteDuplicates(list): 
+    final_list = [] 
+    for num in list: 
+        if num not in final_list: 
+            final_list.append(num) 
+    return final_list",code
+Create a Python program that uses a pre-trained machine learning model to classify text.,Not applicable,"import numpy as np 
+import pandas as pd 
+
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.svm import LinearSVC
+
+# Create training and test sets
+data = pd.read_csv('data.csv', sep=',')
+X_train, X_test, y_train, y_test = train_test_split(data['text'], data['label'])
+
+# Create vocab features
+vectorizer = CountVectorizer(stop_words=""english"")
+vectorizer.fit(X_train)
+X_train_vector = vectorizer.transform(X_train)
+X_test_vector = vectorizer.transform(X_test)
+
+# Train the model
+model = LinearSVC()
+model.fit(X_train_vector, y_train)
+
+# Make predictions on the test set
+y_pred = model.predict(X_test_vector)
+
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+print(""Model accuracy: {}"".format(accuracy))","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Create a Python program that uses a pre-trained machine learning model to classify text.
+
+### Input:
+Not applicable
+
+### Output:
+import numpy as np 
+import pandas as pd 
+
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.svm import LinearSVC
+
+# Create training and test sets
+data = pd.read_csv('data.csv', sep=',')
+X_train, X_test, y_train, y_test = train_test_split(data['text'], data['label'])
+
+# Create vocab features
+vectorizer = CountVectorizer(stop_words=""english"")
+vectorizer.fit(X_train)
+X_train_vector = vectorizer.transform(X_train)
+X_test_vector = vectorizer.transform(X_test)
+
+# Train the model
+model = LinearSVC()
+model.fit(X_train_vector, y_train)
+
+# Make predictions on the test set
+y_pred = model.predict(X_test_vector)
+
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+print(""Model accuracy: {}"".format(accuracy))",code
+Translate the following code from JavaScript to Python,"function add(a, b){
+    return a + b;
+}","# Translate the following function from JavaScript to Python
+def add(a, b):
+    return a + b","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Translate the following code from JavaScript to Python
+
+### Input:
+function add(a, b){
+    return a + b;
+}
+
+### Output:
+# Translate the following function from JavaScript to Python
+def add(a, b):
+    return a + b",code
+Classify numbers into odd and even using Python.,"list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]","odd_list = []
+even_list = []
+
+for x in list:
+    if x % 2 == 0:
+        even_list.append(x)
+    else:
+        odd_list.append(x)
+        
+print(""Odd numbers: "", odd_list)
+print(""Even numbers: "", even_list)","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Classify numbers into odd and even using Python.
+
+### Input:
+list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+### Output:
+odd_list = []
+even_list = []
+
+for x in list:
+    if x % 2 == 0:
+        even_list.append(x)
+    else:
+        odd_list.append(x)
+        
+print(""Odd numbers: "", odd_list)
+print(""Even numbers: "", even_list)",code
+Write Python code to classify a lead email.,"The email content: ""Hello, I am interested in getting more information about your product.""","# Detect the intent of the email
+intent = ""lead""
+
+# Label the email
+label = ""Lead""","Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Write Python code to classify a lead email.
+
+### Input:
+The email content: ""Hello, I am interested in getting more information about your product.""
+
+### Output:
+# Detect the intent of the email
+intent = ""lead""
+
+# Label the email
+label = ""Lead""",code

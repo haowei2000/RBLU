@@ -92,7 +92,7 @@ def main():
     # print(df)
     for field in ["code", "medical", "finance", "law"]:
         data = load_field(field, 100, 25, 150)
-        plot_string_length_distribution(pd.DataFrame(data), "question")
+        plot_string_length_distribution(data, "question")
 
 
 if __name__ == "__main__":
