@@ -6,8 +6,10 @@ when encoding large text collections.
 
 from sentence_transformers import SentenceTransformer
 import evaluate
+import torch
 
-def bert_score(predictions, references):
+
+def bert_score(predictions: list[str], references: list[str]) -> dict:
     """
     Calculates the BERT score between the given predictions and references.
 
@@ -23,6 +25,8 @@ def bert_score(predictions, references):
     # Compute the embeddings using the multi-process pool
     predictions_embeddings = model.encode(predictions, normalize_embeddings=True)
     references_embeddings = model.encode(references, normalize_embeddings=True)
+    predictions_embeddings = torch.tensor(predictions_embeddings)
+    references_embeddings = torch.tensor(references_embeddings)
     matrix = model.similarity(predictions_embeddings, references_embeddings)
     diagonal_mean = matrix.diagonal().mean()
     return {model.similarity_fn_name: float(diagonal_mean)}
@@ -41,17 +45,7 @@ def rouge_and_bert(predictions: list[str], references: list[str]) -> dict:
     """
     rouge = evaluate.load("rouge")
     score = rouge.compute(predictions=predictions, references=references)
+    if not isinstance(score, dict):
+        raise ValueError("The returned score from rouge.compute is not a dictionary")
     score.update(bert_score(predictions=predictions, references=references))
     return score
-
-
-# Important, you need to shield your code with if __name__.
-# Otherwise, CUDA runs into issues when spawning new processes.
-# if __name__ == "__main__":
-#     from proxy import set_proxy, close_proxy
-#     set_proxy()
-#     score = rouge_and_bert(
-#         ["Hello, how are you?", "The weather is nice today."], ["Hi, how are you?", "It is sunny."]
-#     )
-#     print(score)
-#     close_proxy()

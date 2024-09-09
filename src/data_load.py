@@ -6,7 +6,6 @@ folder path is ./data
 import pandas as pd
 import pymongo
 import matplotlib.pyplot as plt
-from proxy import set_proxy
 
 
 def load_field(
@@ -75,25 +74,3 @@ def plot_string_length_distribution(data: pd.DataFrame, key: str) -> None:
     histogram.set_xlabel("String Length")
     histogram.set_ylabel("Frequency")
     plt.show()
-
-
-def main():
-    """
-    This is the main function that loads data for different fields and
-    plots the string length distribution.
-
-    Parameters:
-    None
-
-    Returns:
-    None
-    """
-    set_proxy()
-    # print(df)
-    for field in ["code", "medical", "finance", "law"]:
-        data = load_field(field, 100, 25, 150)
-        plot_string_length_distribution(pd.DataFrame(data), "question")
-
-
-if __name__ == "__main__":
-    main()
