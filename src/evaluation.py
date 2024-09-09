@@ -1,6 +1,6 @@
-'''
+"""
 a file that contains the Evaluation class, which is the main class for evaluating the model.
-'''
+"""
 
 import time
 from typing import Callable, Optional
@@ -10,7 +10,7 @@ from datasets import Dataset
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as torchDataset
 from tqdm import tqdm
-from transformers import BatchEncoding, PreTrainedTokenizer, PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast, BatchEncoding
 
 from process import Process
 
@@ -43,10 +43,11 @@ class TokenizedDataset(torchDataset):
 
 
 class MyGenerator:
-    '''
+    """
     a class that with batch and chat template
     generates responses based on the given model and tokenizer
-    '''
+    """
+
     def __init__(
         self,
         model,
@@ -94,26 +95,21 @@ class MyGenerator:
         6. Measures and prints the time taken for the batch generation process.
         """
         start_time = time.time()
-        input_ids, attention_masks = self.tokenize_texts(text_list)
+        batch_encoding = self.tokenize_texts(text_list)
+        input_ids, attention_masks = batch_encoding["input_ids"], batch_encoding["attention_mask"]
         input_ids, attention_masks = (
-            input_ids.to(self.device),
-            attention_masks.to(self.device),
+            input_ids.to(self.device),  # type: ignore
+            attention_masks.to(self.device),  # type: ignore
         )
         dataset = TokenizedDataset(input_ids, attention_masks)
-        dataloader = DataLoader(
-            dataset=dataset, batch_size=self.batch_size, shuffle=False
-        )
+        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
         responses = []
         for model_inputs in tqdm(dataloader, desc="Generating responses"):
             # Directly use generate() and tokenizer.decode() to get the output.
             # Use `max_new_tokens` to control the maximum output length.
             with torch.no_grad():
-                generated_ids = self.model.generate(
-                    **model_inputs, gen_kwargs=self.gen_kwargs
-                )
-                response = self.tokenizer.batch_decode(
-                    generated_ids, skip_special_tokens=True
-                )
+                generated_ids = self.model.generate(**model_inputs, **self.gen_kwargs)
+                response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
                 responses.extend(response)
         end_time = time.time()
         print(f"Time taken for batch generation: {end_time - start_time:.2f} seconds")
@@ -137,25 +133,29 @@ class MyGenerator:
         if self.apply_template is not None:
             text_templated_list = [self.apply_template(text) for text in text_list]
             tokenized_batch = self.tokenizer.apply_chat_template(
-                text_templated_list, tokenize=True, add_generation_prompt=True
+                text_templated_list,
+                tokenize=True,
+                add_generation_prompt=True,
+                return_dict=True,
+                return_tensors="pt",
+                padding=True,
             )
-            if not isinstance(tokenized_batch, BatchEncoding):
-                raise TypeError(
-                    "The returned type from apply_chat_template must be BatchEncoding"
-                )
         else:
             tokenized_batch = self.tokenizer.batch_encode_plus(
                 text_list,
                 padding="longest",
                 return_tensors="pt",
             )
+        if not isinstance(tokenized_batch, BatchEncoding):
+            raise TypeError("The tokenized_batch is not `BatchEncoding`.")
         return tokenized_batch
 
 
 class Evaluation:
-    '''
+    """
     it's contains all the steps in evaluation and compute the score
-    '''
+    """
+
     def __init__(
         self,
         model,

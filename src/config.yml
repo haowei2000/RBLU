@@ -3,18 +3,18 @@ mongo:
   port: 27017
   database: llm_evaluation
 data:
-  doc_count: 500
+  doc_count: 5
   min_length: 25
   max_length: 150
 model: 
-  model_checkpoint: /public/model/hub/llm-research/meta-llama-3-8b-instruct
+  model_checkpoint: /public/model/hub/qwen/qwen2-7b-instruct
 eval:
   task_list:
     - law
     - finance
     - medical
   batch_size: 8
-  loop: 5
+  loop: 2
   max_length_input: 1024
-  gen_args:
+  gen_kwargs:
     max_new_tokens: 1024

@@ -21,7 +21,11 @@ def main():
     #     project='llm_evaluation',
     # )
     set_proxy()
-    with open("config.yml", "r", encoding="utf-8") as config_file:
+        #     "/public/model/hub/llm-research/meta-llama-3-8b-instruct",
+        # "/public/model/hub/qwen/qwen2-7b-instruct",
+        # "/public/model/hub/AI-ModelScope/gemma-2-9b-it",
+        # "/public/model/hub/ZhipuAI/glm-4-9b-chat",
+    with open("src/config.yml", "r", encoding="utf-8") as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
     loop = config["eval"]["loop"]
     batch_size = config["eval"]["batch_size"]
@@ -38,7 +42,8 @@ def main():
         trust_remote_code=True,
         padding_side="left",  # Set padding side to 'left'
     )
-    tokenizer.pad_token = tokenizer.eos_token
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
     for task in config["eval"]["task_list"]:  # , 'medical', :
         print(f"{model_name}:{task}")
         original_questions = load_field(
@@ -46,7 +51,7 @@ def main():
             count=config["data"]["doc_count"],
             min_length=config["data"]["min_length"],
             max_length=config["data"]["max_length"],
-            from_remote=False,
+            from_remote=True,
         )
         evaluation = Evaluation(
             model=model,
@@ -56,7 +61,7 @@ def main():
             batch_size=batch_size,
             loop_count=loop,
             apply_template=default_template,
-            gen_kwargs=config["gen_kwargs"],
+            gen_kwargs=config["eval"]["gen_kwargs"],
         )
         # evaluation.qa_dataset = load_from_disk(f'result/{model_name}_{field}')
         evaluation.loop_evaluation()
