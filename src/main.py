@@ -1,64 +1,51 @@
-"""a evaluation module for LLAMA3.1 evaluation"""
+'''a evaluation module for LLAMA3.1 evaluation'''
 
-from datetime import datetime
-import pymongo
+import os
+
+
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import wandb
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import yaml
+
+from data_load import load_field
 from evaluation import Evaluation
-from proxy import set_proxy, close_proxy
 from metric import rouge_and_bert
-from dataload import load_field
 from process import default_template
+from proxy import close_proxy, set_proxy
 
 def main():
-    """
-    This function performs evaluation using the Meta-Llama model on different fields of data.
-    It loads a model checkpoint, sets up a proxy, and evaluates the model using the Rouge metric.
-    The evaluation is performed in a loop for a specified number of iterations.
-    The original questions are read from a CSV file for each field and a subset of questions is selected.
-    The Evaluation class is used to perform the evaluation and calculate scores.
-    The scores are then written to a MongoDB database.
-    Finally, the proxy is closed.
-
-    Parameters:
-    None
-
-    Returns:
-    None
-    """
-    # os.environ['WANDB_MODE'] = 'dryrun'
+    os.environ['WANDB_MODE'] = 'dryrun'
     # wandb.init(
     #     # set the wandb project where this run will be logged
-    #     project="llm_evaluation",
+    #     project='llm_evaluation',
     # )
     set_proxy()
-
-    model_pool = [
-        "/public/model/hub/llm-research/meta-llama-3-8b-instruct",
-        "/public/model/hub/qwen/qwen2-7b-instruct",
-        "/public/model/hub/AI-ModelScope/gemma-2-9b-it",
-        "/public/model/hub/ZhipuAI/glm-4-9b-chat",
-    ]
-    model_checkpoint = model_pool[0]
-    model_name = model_checkpoint.rsplit("/", maxsplit=1)[-1]
-    loop = 3
-    batch_size= 6
-    document_count = 4
+    with open('config.yml', 'r', encoding='utf-8') as config_file:
+        config=yaml.load(config_file, Loader=yaml.FullLoader)
+    loop = config['eval']['loop']
+    batch_size = config['eval']['batch_size']
+    model_checkpoint = config['model']['model_checkpoint']
+    model_name = model_checkpoint.rsplit('/', maxsplit=1)[-1]
     model = AutoModelForCausalLM.from_pretrained(
         model_checkpoint,
-        device_map="auto",
+        device_map='auto',
         torch_dtype=torch.bfloat16,
         trust_remote_code=True,
     ).eval()
     tokenizer = AutoTokenizer.from_pretrained(
-        model_checkpoint, trust_remote_code=True, padding_side="left"  # Set padding side to 'left'
+        model_checkpoint,
+        trust_remote_code=True,
+        padding_side='left',  # Set padding side to 'left'
     )
     tokenizer.pad_token = tokenizer.eos_token
-    for field in ["medical","finance", "law"]: #, "medical", :
-        print(f"{model_name}:{field}")
+    for task in config['eval']['task_list']:  # , 'medical', :
+        print(f'{model_name}:{task}')
         original_questions = load_field(
-            field=field, count=document_count, min_length=20, max_length=300, from_remote=True
+            field=task,
+            count=config['data']['doc_count'],
+            min_length=config['data']['min_length'],
+            max_length=config['data']['max_length'],
+            from_remote=True,
         )
         evaluation = Evaluation(
             model=model,
@@ -67,24 +54,28 @@ def main():
             original_questions=original_questions,
             batch_size=batch_size,
             loop_count=loop,
-            document_count=document_count,
-            template=default_template,
+            apply_template=default_template,
+            gen_kwargs=config['gen_kwargs'],
         )
+        # evaluation.qa_dataset = load_from_disk(f'result/{model_name}_{field}')
         evaluation.loop_evaluation()
-        # evaluation.qa_dataset.to_json('records.json')
-        evaluation.qa_dataset.to_json(f'result/{model_name}_{field}_qa_dataset.json', orient='records', lines=True)
-        evaluation.qa_dataset.save_to_disk(f'result/{model_name}_{field}')
+        score = evaluation.get_score(1,'q','0')
+        print(score)
+        evaluation.qa_dataset.to_json(
+            f'result/{model_name}_{task}_qa_dataset.json', orient='records', lines=True
+        )
+        evaluation.qa_dataset.save_to_disk(f'result/{model_name}_{task}')
         # evaluation.get_score()
         # print(evaluation.result.scores)
-        # print("start to save the score")
-        # evaluation.save_score(path=f'./score/{model_name}_{field}_scores.csv"')
-        # current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-        # database = pymongo.MongoClient("10.48.48.7", 27017)["llm_evaluation"][
-        #     f"{model_name}_{field}_{current_time}"
+        # print('start to save the score')
+        # evaluation.save_score(path=f'./score/{model_name}_{field}_scores.csv')
+        # current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
+        # database = pymongo.MongoClient('10.48.48.7', 27017)['llm_evaluation'][
+        #     f'{model_name}_{field}_{current_time}'
         # ]
         # # evaluation.load_from_db(database)
         # # print(evaluation.result.questions)
-        # print("start to save the QA")
+        # print('start to save the QA')
         # evaluation.write_qa2db(database)
     # wandb.finish()
     close_proxy()

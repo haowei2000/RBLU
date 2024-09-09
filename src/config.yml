@@ -1,0 +1,20 @@
+mongo: 
+  ip_address: 10.48.48.7
+  port: 27017
+  database: llm_evaluation
+data:
+  doc_count: 500
+  min_length: 25
+  max_length: 150
+model: 
+  model_checkpoint: /public/model/hub/llm-research/meta-llama-3-8b-instruct
+eval:
+  task_list:
+    - law
+    - finance
+    - medical
+  batch_size: 8
+  loop: 5
+  max_length_input: 1024
+  gen_args:
+    max_new_tokens: 1024

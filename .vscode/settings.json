@@ -7,6 +7,9 @@
         "ylabel",
         "Zhipu"
     ],
-    "python.analysis.typeCheckingMode": "off",
-    "python.analysis.autoImportCompletions": true
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "pylint.importStrategy": "fromEnvironment",
+    "linter.delay": 5,
+    "editor.quickSuggestionsDelay": 0
 }

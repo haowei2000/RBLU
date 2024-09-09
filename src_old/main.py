@@ -8,7 +8,7 @@ import wandb
 from evaluation import Evaluation
 from proxy import set_proxy, close_proxy
 from metric import rouge_and_bert
-from dataload import load_field
+from data_load import load_field
 
 
 def main():
