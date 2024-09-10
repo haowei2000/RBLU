@@ -10,7 +10,7 @@ import yaml
 from data_load import load_field
 from evaluation import Evaluation
 from metric import rouge_and_bert
-from process import default_template
+from process import llama_template,gemma_template
 from proxy import close_proxy, set_proxy
 
 
@@ -31,6 +31,10 @@ def main():
     batch_size = config["eval"]["batch_size"]
     model_checkpoint = config["model"]["model_checkpoint"]
     model_name = model_checkpoint.rsplit("/", maxsplit=1)[-1]
+    if model_name == "meta-llama-3-8b-instruct":
+        apply_template = llama_template
+    else:
+        apply_template = gemma_template
     model = AutoModelForCausalLM.from_pretrained(
         model_checkpoint,
         device_map="auto",
@@ -60,7 +64,7 @@ def main():
             original_questions=original_questions,
             batch_size=batch_size,
             loop_count=loop,
-            apply_template=default_template,
+            apply_template=apply_template,
             gen_kwargs=config["eval"]["gen_kwargs"],
         )
         # evaluation.qa_dataset = load_from_disk(f'result/{model_name}_{field}')

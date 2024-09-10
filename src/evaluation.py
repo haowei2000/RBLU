@@ -15,31 +15,28 @@ from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast, BatchEnco
 from process import Process
 
 
-class TokenizedDataset(torchDataset):
+class TokenizedDataset(Dataset):
     """
     TokenizedDataset is a custom dataset class for handling tokenized input data.
 
     Attributes:
-        input_ids (torch.Tensor): A tensor containing the tokenized input IDs.
-        attention_masks (torch.Tensor): A tensor containing the attention masks corresponding to the input IDs.
+        input_ids (list or tensor): A list or tensor containing the tokenized input IDs.
+        attention_masks (list or tensor): A list or tensor containing the attention masks corresponding to the input IDs.
 
     Methods:
         __len__(): Returns the number of samples in the dataset.
-        __getitem__(idx: int): Returns a dictionary containing the input IDs and attention mask for the given index.
+        __getitem__(idx): Returns a dictionary containing the input IDs and attention mask for the given index.
     """
 
-    def __init__(self, input_ids: torch.Tensor, attention_masks: torch.Tensor) -> None:
+    def __init__(self, input_ids, attention_masks):
         self.input_ids = input_ids
         self.attention_masks = attention_masks
 
-    def __len__(self) -> int:
+    def __len__(self):
         return len(self.input_ids)
 
-    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
-        return {
-            "input_ids": self.input_ids[idx],
-            "attention_mask": self.attention_masks[idx],
-        }
+    def __getitem__(self, idx):
+        return {"input_ids": self.input_ids[idx], "attention_mask": self.attention_masks[idx]}
 
 
 class MyGenerator:
@@ -71,7 +68,6 @@ class MyGenerator:
         """
         self.model = model
         self.tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast = tokenizer
-        self.device = "cuda"
         self.batch_size = batch_size
         self.apply_template: Optional[Callable[[str], list[dict]]] = apply_template
         self.gen_kwargs = gen_kwargs
@@ -96,21 +92,22 @@ class MyGenerator:
         """
         start_time = time.time()
         batch_encoding = self.tokenize_texts(text_list)
-        input_ids, attention_masks = batch_encoding["input_ids"], batch_encoding["attention_mask"]
-        input_ids, attention_masks = (
-            input_ids.to(self.device),  # type: ignore
-            attention_masks.to(self.device),  # type: ignore
-        )
-        dataset = TokenizedDataset(input_ids, attention_masks)
+        dataset = TokenizedDataset(batch_encoding["input_ids"], batch_encoding["attention_mask"])
         dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
         responses = []
-        for model_inputs in tqdm(dataloader, desc="Generating responses"):
+        for inputs in tqdm(dataloader, desc="Generating responses"):
             # Directly use generate() and tokenizer.decode() to get the output.
             # Use `max_new_tokens` to control the maximum output length.
             with torch.no_grad():
-                generated_ids = self.model.generate(**model_inputs, **self.gen_kwargs)
-                response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
-                responses.extend(response)
+                inputs = {key: tensor.to(self.model.device) for key, tensor in inputs.items()}
+                outputs = self.model.generate(**inputs, **self.gen_kwargs)
+                outputs = [
+                    self.tokenizer.decode(
+                        output[inputs["input_ids"].size(1) :], skip_special_tokens=True
+                    )
+                    for output in outputs
+                ]
+                responses.extend(outputs)
         end_time = time.time()
         print(f"Time taken for batch generation: {end_time - start_time:.2f} seconds")
         return responses
@@ -132,20 +129,19 @@ class MyGenerator:
         """
         if self.apply_template is not None:
             text_templated_list = [self.apply_template(text) for text in text_list]
-            tokenized_batch = self.tokenizer.apply_chat_template(
+            text_templated_list = self.tokenizer.apply_chat_template(
                 text_templated_list,
-                tokenize=True,
+                tokenize=False,
                 add_generation_prompt=True,
-                return_dict=True,
-                return_tensors="pt",
-                padding=True,
             )
         else:
-            tokenized_batch = self.tokenizer.batch_encode_plus(
-                text_list,
-                padding="longest",
-                return_tensors="pt",
-            )
+            text_templated_list = text_list
+        tokenized_batch = self.tokenizer.batch_encode_plus(
+            text_templated_list,  # type: ignore
+            padding=True,
+            return_tensors="pt",
+            add_special_tokens=True,
+        )
         if not isinstance(tokenized_batch, BatchEncoding):
             raise TypeError("The tokenized_batch is not `BatchEncoding`.")
         return tokenized_batch

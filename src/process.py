@@ -53,7 +53,7 @@ def default_answer_extractor(example, loop):
     return example
 
 
-def default_question_template(example, loop):
+def default_question_prompt(example, loop):
     """
     Updates the given example dictionary by copying the value of the key 'q{loop}' 
     to a new key 'q{loop}_prompt'.
@@ -69,7 +69,7 @@ def default_question_template(example, loop):
     return example
 
 
-def default_answer_template(example, loop):
+def default_answer_prompt(example, loop):
     """
     Generates a prompt for a given example and loop index.
 
@@ -90,7 +90,7 @@ def default_answer_template(example, loop):
     return example
 
 
-def default_template(user_input:str)->list:
+def llama_template(user_input:str)->list:
     """
     Generates a default message template for a Q&A bot.
 
@@ -112,6 +112,23 @@ def default_template(user_input:str)->list:
     ]
     return message
 
+def gemma_template(user_input:str)->list:
+    """
+    Generates a gemma message template.
+
+    Args:
+        user_input (str): The user's input message.
+
+    Returns:
+        list: A list of dictionaries representing the message template, 
+            where the first dictionary sets the role to "system" with a 
+            content indicating the bot's role, and the second dictionary 
+            contains the user's input.
+    """
+    message = [
+        {"role": "user", "content": user_input},
+    ]
+    return message
 
 class Process:
     """
@@ -123,10 +140,12 @@ class Process:
         self,
         question_extract: Callable = default_question_extractor,
         answer_extract: Callable = default_answer_extractor,
-        question_template: Callable = default_question_template,
-        answer_template: Callable = default_answer_template,
+        question_prompt: Callable = default_question_prompt,
+        answer_prompt: Callable = default_answer_prompt,
+        apply_chat_template: Callable = llama_template,
+        decode_chat_template: Callable = llama_template,
     ) -> None:
         self.question_extract = question_extract
         self.answer_extract = answer_extract
-        self.question_template = question_template
-        self.answer_template = answer_template
+        self.question_template = question_prompt
+        self.answer_template = answer_prompt
