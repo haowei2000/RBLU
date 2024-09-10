@@ -53,6 +53,78 @@
     "q2": {
       "dtype": "string",
       "_type": "Value"
+    },
+    "q2_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a2_output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a2": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a2_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q3_output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q3": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q3_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a3_output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a3": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a3_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q4_output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q4": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q4_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a4_output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a4": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a4_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q5_output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q5": {
+      "dtype": "string",
+      "_type": "Value"
     }
   },
   "homepage": "",
