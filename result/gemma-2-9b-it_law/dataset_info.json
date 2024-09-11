@@ -1,0 +1,84 @@
+{
+  "citation": "",
+  "description": "",
+  "features": {
+    "q0": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q0_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a0_output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a0": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a0_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q1_output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q1": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q1_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a1_output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a1": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a1_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q2_output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q2": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q2_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a2_output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a2": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a2_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q3_output": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q3": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": ""
+}

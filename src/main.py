@@ -1,36 +1,34 @@
 """a evaluation module for LLAMA3.1 evaluation"""
 
-import os
-
-
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
 import yaml
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from data_load import load_field
+import wandb
+from data_load import load_qa
 from evaluation import Evaluation
 from metric import rouge_and_bert
-from process import default_template
+from process import apply_default_template, apply_gemma_template
 from proxy import close_proxy, set_proxy
 
 
 def main():
-    os.environ["WANDB_MODE"] = "dryrun"
-    # wandb.init(
-    #     # set the wandb project where this run will be logged
-    #     project='llm_evaluation',
-    # )
+    # os.environ["WANDB_MODE"] = "dryrun"
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="llm_evaluation",
+    )
     set_proxy()
-        #     "/public/model/hub/llm-research/meta-llama-3-8b-instruct",
-        # "/public/model/hub/qwen/qwen2-7b-instruct",
-        # "/public/model/hub/AI-ModelScope/gemma-2-9b-it",
-        # "/public/model/hub/ZhipuAI/glm-4-9b-chat",
     with open("src/config.yml", "r", encoding="utf-8") as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
     loop = config["eval"]["loop"]
     batch_size = config["eval"]["batch_size"]
-    model_checkpoint = config["model"]["model_checkpoint"]
-    model_name = model_checkpoint.rsplit("/", maxsplit=1)[-1]
+    model_name = config["model"]["model_name"]
+    model_checkpoint = config["model"]["model_path"][model_name]
+    if model_name == "gemma":
+        apply_template = apply_gemma_template
+    else:
+        apply_template = apply_default_template
     model = AutoModelForCausalLM.from_pretrained(
         model_checkpoint,
         device_map="auto",
@@ -46,12 +44,13 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token
     for task in config["eval"]["task_list"]:  # , 'medical', :
         print(f"{model_name}:{task}")
-        original_questions = load_field(
-            field=task,
+        original_questions, _ = load_qa(
+            language=config["eval"]["language"],
+            task=task,
             count=config["data"]["doc_count"],
             min_length=config["data"]["min_length"],
             max_length=config["data"]["max_length"],
-            from_remote=True,
+            from_remote=False,
         )
         evaluation = Evaluation(
             model=model,
@@ -60,7 +59,8 @@ def main():
             original_questions=original_questions,
             batch_size=batch_size,
             loop_count=loop,
-            apply_template=default_template,
+            apply_template=apply_template,
+            tokenizer_kwargs=config["eval"]["tokenizer_kwargs"],
             gen_kwargs=config["eval"]["gen_kwargs"],
         )
         # evaluation.qa_dataset = load_from_disk(f'result/{model_name}_{field}')
@@ -83,7 +83,7 @@ def main():
         # # print(evaluation.result.questions)
         # print('start to save the QA')
         # evaluation.write_qa2db(database)
-    # wandb.finish()
+    wandb.finish()
     close_proxy()
 
 
