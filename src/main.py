@@ -2,11 +2,12 @@
 
 import torch
 import yaml
+from datasets import load_from_disk
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 import wandb
 from data_load import load_qa
-from evaluation import Evaluation
+from evaluation import Evaluation, save_score
 from metric import rouge_and_bert
 from process import apply_default_template, apply_gemma_template
 from proxy import close_proxy, set_proxy
@@ -21,8 +22,9 @@ def main():
     set_proxy()
     with open("src/config.yml", "r", encoding="utf-8") as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
-    loop = config["eval"]["loop"]
+    loop_count = config["eval"]["loop"]
     batch_size = config["eval"]["batch_size"]
+    language = config["eval"]["language"]
     model_name = config["model"]["model_name"]
     model_checkpoint = config["model"]["model_path"][model_name]
     if model_name == "gemma":
@@ -45,7 +47,7 @@ def main():
     for task in config["eval"]["task_list"]:  # , 'medical', :
         print(f"{model_name}:{task}")
         original_questions, _ = load_qa(
-            language=config["eval"]["language"],
+            language=language,
             task=task,
             count=config["data"]["doc_count"],
             min_length=config["data"]["min_length"],
@@ -55,22 +57,28 @@ def main():
         evaluation = Evaluation(
             model=model,
             tokenizer=tokenizer,
-            metric_compute=rouge_and_bert,
             original_questions=original_questions,
             batch_size=batch_size,
-            loop_count=loop,
+            loop_count=loop_count,
             apply_template=apply_template,
             tokenizer_kwargs=config["eval"]["tokenizer_kwargs"],
             gen_kwargs=config["eval"]["gen_kwargs"],
         )
-        # evaluation.qa_dataset = load_from_disk(f'result/{model_name}_{field}')
-        evaluation.loop_evaluation()
-        score = evaluation.get_score(1, "q", "0")
-        print(score)
-        evaluation.qa_dataset.to_json(
-            f"result/{model_name}_{task}_qa_dataset.json", orient="records", lines=True
+        qa_dataset = load_from_disk(f"result/{model_name}_{task}")
+        # qa_dataset = evaluation.loop_evaluation()
+        # evaluation.qa_dataset.to_json(
+        #     f"result/{model_name}_{task}_qa_dataset.json", orient="records", lines=True
+        # )
+        # evaluation.qa_dataset.save_to_disk(f"result/{model_name}_{task}")
+        save_score(
+            qa_dataset=qa_dataset,
+            metric_compute=rouge_and_bert,
+            loop_count=loop_count,
+            task=task,
+            model_name=model_name,
+            language=language,
+            path=f"score/{model_name}_{task}_{language}_scores.csv",
         )
-        evaluation.qa_dataset.save_to_disk(f"result/{model_name}_{task}")
         # evaluation.get_score()
         # print(evaluation.result.scores)
         # print('start to save the score')

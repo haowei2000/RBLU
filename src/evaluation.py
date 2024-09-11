@@ -5,6 +5,7 @@ a file that contains the Evaluation class, which is the main class for evaluatin
 import time
 from typing import Callable, Optional
 
+import pandas as pd
 import torch
 from datasets import Dataset
 from torch.utils.data import DataLoader
@@ -165,7 +166,6 @@ class Evaluation:
         self,
         model,
         tokenizer,
-        metric_compute: Callable[[list, list], dict],
         original_questions: list[str],
         batch_size: int,
         loop_count: int,
@@ -278,14 +278,14 @@ def get_score(
     if loop >= 1:
         if mode in ["q", "a"]:
             predictions = qa_dataset[f"{mode}{loop}"]
+            if refer == "n-1":
+                references = qa_dataset[f"{mode}{loop-1}"]
+            elif refer == "0":
+                references = qa_dataset[f"{mode}{0}"]
+            else:
+                print("Refer error")
         else:
             print("mode error")
-        if refer == "n-1":
-            references = qa_dataset[f"{mode}{loop-1}"]
-        elif refer == "0":
-            references = qa_dataset[f"{mode}{0}"]
-        else:
-            print("Refer error")
     else:
         print("Loop error")
     score = metric_compute(predictions, references)
@@ -299,7 +299,7 @@ def save_score(
     Save the score to the disk.
     """
     scores = []
-    for loop in range(loop_count):
+    for loop in range(1, loop_count):
         for mode in ["q", "a"]:
             for refer in ["n-1", "0"]:
                 score = get_score(qa_dataset, metric_compute, loop, mode, refer)
@@ -310,6 +310,6 @@ def save_score(
                 score["task"] = task
                 score["language"] = language
                 scores.append(score)
-    scores = Dataset.from_dict(scores)
-    scores.to_json(path, orient="records", lines=True)
+    df = pd.DataFrame(scores)
+    df.to_csv(path, index=False)
     return qa_dataset

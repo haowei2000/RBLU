@@ -128,7 +128,7 @@ def load_qa(
         else:
             raise ValueError("Invalid language")
     else:
-        dataset = load_dataset("json", data_files=filename, split="train")
+        dataset = load_dataset("json", data_files=str(filename), split="train")
 
     dataset = rename(dataset, ["output", "answer", "response", "body"], "answer")
     dataset = rename(
@@ -142,7 +142,7 @@ def load_qa(
         )
         dataset.to_json(filename, force_ascii=False, lines=True)
     else:
-        print("Not enough data to select and load from the remote")
+        raise ValueError("Not enough data")
     return dataset["question"], dataset["answer"]
 
 

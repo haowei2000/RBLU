@@ -3,9 +3,9 @@ mongo:
   port: 27017
   database: llm_evaluation
 data:
-  doc_count: 500
-  min_length: 25
-  max_length: 500
+  doc_count: 5
+  min_length: 10
+  max_length: 1000
 model:
   model_name: chatglm
   model_path:
@@ -16,12 +16,12 @@ model:
 eval:
   language: en
   task_list:
-    - legal
-    - financial
+    # - legal
+    # - financial
     - medical
-    - code
-  batch_size: 4
-  loop: 5
+    # - code
+  batch_size: 8
+  loop: 2
   tokenizer_kwargs:
     padding: True
     # max_length: 1024
