@@ -1,7 +1,0 @@
-mongo: ip_address:10.48.48.7
-  port:27017
-  database:llm_evaluation
-data: min_length:25
-  max_length:150
-model: model_checkpoint:src/models/model.h5
-metric: rouge

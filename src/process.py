@@ -90,7 +90,7 @@ def default_answer_prompt(example, loop):
     return example
 
 
-def llama_template(user_input:str)->list:
+def apply_default_template(user_input:str)->list:
     """
     Generates a default message template for a Q&A bot.
 
@@ -112,7 +112,7 @@ def llama_template(user_input:str)->list:
     ]
     return message
 
-def gemma_template(user_input:str)->list:
+def apply_gemma_template(user_input:str)->list:
     """
     Generates a gemma message template.
 
@@ -142,8 +142,6 @@ class Process:
         answer_extract: Callable = default_answer_extractor,
         question_prompt: Callable = default_question_prompt,
         answer_prompt: Callable = default_answer_prompt,
-        apply_chat_template: Callable = llama_template,
-        decode_chat_template: Callable = llama_template,
     ) -> None:
         self.question_extract = question_extract
         self.answer_extract = answer_extract

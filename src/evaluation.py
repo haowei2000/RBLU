@@ -8,9 +8,8 @@ from typing import Callable, Optional
 import torch
 from datasets import Dataset
 from torch.utils.data import DataLoader
-from torch.utils.data import Dataset as torchDataset
 from tqdm import tqdm
-from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast, BatchEncoding
+from transformers import BatchEncoding, PreTrainedTokenizer, PreTrainedTokenizerFast
 
 from process import Process
 
@@ -36,7 +35,10 @@ class TokenizedDataset(Dataset):
         return len(self.input_ids)
 
     def __getitem__(self, idx):
-        return {"input_ids": self.input_ids[idx], "attention_mask": self.attention_masks[idx]}
+        return {
+            "input_ids": self.input_ids[idx],
+            "attention_mask": self.attention_masks[idx],
+        }
 
 
 class MyGenerator:
@@ -51,6 +53,7 @@ class MyGenerator:
         tokenizer,
         batch_size,
         apply_template,
+        tokenizer_kwargs,
         gen_kwargs,
     ) -> None:
         """
@@ -70,6 +73,7 @@ class MyGenerator:
         self.tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast = tokenizer
         self.batch_size = batch_size
         self.apply_template: Optional[Callable[[str], list[dict]]] = apply_template
+        self.tokenizer_kwargs = tokenizer_kwargs
         self.gen_kwargs = gen_kwargs
 
     def __call__(self, text_list: list[str]) -> list[str]:
@@ -92,14 +96,20 @@ class MyGenerator:
         """
         start_time = time.time()
         batch_encoding = self.tokenize_texts(text_list)
-        dataset = TokenizedDataset(batch_encoding["input_ids"], batch_encoding["attention_mask"])
-        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
+        dataset = TokenizedDataset(
+            batch_encoding["input_ids"], batch_encoding["attention_mask"]
+        )
+        dataloader = DataLoader(
+            dataset=dataset, batch_size=self.batch_size, shuffle=False
+        )
         responses = []
         for inputs in tqdm(dataloader, desc="Generating responses"):
             # Directly use generate() and tokenizer.decode() to get the output.
             # Use `max_new_tokens` to control the maximum output length.
             with torch.no_grad():
-                inputs = {key: tensor.to(self.model.device) for key, tensor in inputs.items()}
+                inputs = {
+                    key: tensor.to(self.model.device) for key, tensor in inputs.items()
+                }
                 outputs = self.model.generate(**inputs, **self.gen_kwargs)
                 outputs = [
                     self.tokenizer.decode(
@@ -138,9 +148,8 @@ class MyGenerator:
             text_templated_list = text_list
         tokenized_batch = self.tokenizer.batch_encode_plus(
             text_templated_list,  # type: ignore
-            padding=True,
             return_tensors="pt",
-            add_special_tokens=True,
+            **self.tokenizer_kwargs,
         )
         if not isinstance(tokenized_batch, BatchEncoding):
             raise TypeError("The tokenized_batch is not `BatchEncoding`.")
@@ -162,6 +171,7 @@ class Evaluation:
         loop_count: int,
         apply_template: Optional[Callable[[str], list]] = None,
         process: Optional[Process] = None,
+        tokenizer_kwargs: Optional[dict] = None,
         gen_kwargs: Optional[dict] = None,
     ):
         """
@@ -182,9 +192,9 @@ class Evaluation:
             tokenizer=tokenizer,
             batch_size=batch_size,
             apply_template=apply_template,
+            tokenizer_kwargs=tokenizer_kwargs,
             gen_kwargs=gen_kwargs,
         )
-        self.metric_compute = metric_compute
         self.qa_dataset = Dataset.from_dict({"q0": original_questions})
         self.loop_count = loop_count
         if process is None:
@@ -240,36 +250,66 @@ class Evaluation:
                 self.process.question_extract, fn_kwargs={"loop": loop}
             )
 
-    def get_score(self, loop: int, mode: str, refer: str) -> dict:
-        """
-        Computes the evaluation score based on the provided loop iteration, mode, and reference.
 
-        Args:
-            loop (int): The loop iteration. Must be greater than or equal to 1.
-            mode (str): The mode of evaluation, either "q" for questions or "a" for answers.
-            refer (str): The reference mode, either "n-1" to use the previous loop's data or "0" to use the initial data.
+def get_score(
+    qa_dataset,
+    metric_compute,
+    loop: int,
+    mode: str,
+    refer: str,
+) -> dict:
+    """
+    Computes the evaluation score based on the provided loop iteration, mode, and reference.
 
-        Returns:
-            dict: The computed score as a dictionary.
+    Args:
+        loop (int): The loop iteration. Must be greater than or equal to 1.
+        mode (str): The mode of evaluation, either "q" for questions or "a" for answers.
+        refer (str): The reference mode, either "n-1" to use the previous loop's data or "0" to use the initial data.
 
-        Raises:
-            ValueError: If the mode is not "q" or "a".
-            ValueError: If the refer is not "n-1" or "0".
-            ValueError: If the loop is less than 1.
-        """
-        predictions, references = [], []
-        if loop >= 1:
-            if mode in ["q", "a"]:
-                predictions = self.qa_dataset[f"{mode}{loop}"]
-            else:
-                print("mode error")
-            if refer == "n-1":
-                references = self.qa_dataset[f"{mode}{loop-1}"]
-            elif refer == "0":
-                references = self.qa_dataset[f"{mode}{0}"]
-            else:
-                print("Refer error")
+    Returns:
+        dict: The computed score as a dictionary.
+
+    Raises:
+        ValueError: If the mode is not "q" or "a".
+        ValueError: If the refer is not "n-1" or "0".
+        ValueError: If the loop is less than 1.
+    """
+    predictions, references = [], []
+    if loop >= 1:
+        if mode in ["q", "a"]:
+            predictions = qa_dataset[f"{mode}{loop}"]
         else:
-            print("Loop error")
-        score = self.metric_compute(predictions, references)
-        return score
+            print("mode error")
+        if refer == "n-1":
+            references = qa_dataset[f"{mode}{loop-1}"]
+        elif refer == "0":
+            references = qa_dataset[f"{mode}{0}"]
+        else:
+            print("Refer error")
+    else:
+        print("Loop error")
+    score = metric_compute(predictions, references)
+    return score
+
+
+def save_score(
+    qa_dataset, metric_compute, loop_count, model_name, task, language, path
+):
+    """
+    Save the score to the disk.
+    """
+    scores = []
+    for loop in range(loop_count):
+        for mode in ["q", "a"]:
+            for refer in ["n-1", "0"]:
+                score = get_score(qa_dataset, metric_compute, loop, mode, refer)
+                score["loop"] = loop
+                score["refer"] = refer
+                score["mode"] = mode
+                score["model_name"] = model_name
+                score["task"] = task
+                score["language"] = language
+                scores.append(score)
+    scores = Dataset.from_dict(scores)
+    scores.to_json(path, orient="records", lines=True)
+    return qa_dataset
