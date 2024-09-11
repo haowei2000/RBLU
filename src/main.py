@@ -4,6 +4,7 @@ import os
 
 
 import torch
+from datasets import load_from_disk
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import yaml
 
@@ -63,14 +64,14 @@ def main():
             apply_template=default_template,
             gen_kwargs=config["eval"]["gen_kwargs"],
         )
-        # evaluation.qa_dataset = load_from_disk(f'result/{model_name}_{field}')
-        evaluation.loop_evaluation()
+        evaluation.qa_dataset = load_from_disk(f'result/{model_name}_{task}')
+        # evaluation.loop_evaluation()
         score = evaluation.get_score(1, "q", "0")
         print(score)
-        evaluation.qa_dataset.to_json(
-            f"result/{model_name}_{task}_qa_dataset.json", orient="records", lines=True
-        )
-        evaluation.qa_dataset.save_to_disk(f"result/{model_name}_{task}")
+        # evaluation.qa_dataset.to_json(
+        #     f"result/{model_name}_{task}_qa_dataset.json", orient="records", lines=True
+        # )
+        # evaluation.qa_dataset.save_to_disk(f"result/{model_name}_{task}")
         # evaluation.get_score()
         # print(evaluation.result.scores)
         # print('start to save the score')
