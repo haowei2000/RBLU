@@ -2,7 +2,6 @@
 
 import torch
 import yaml
-from datasets import load_from_disk
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 import wandb
@@ -52,7 +51,7 @@ def main():
             count=config["data"]["doc_count"],
             min_length=config["data"]["min_length"],
             max_length=config["data"]["max_length"],
-            from_remote=False,
+            from_remote=True,
         )
         evaluation = Evaluation(
             model=model,
@@ -64,12 +63,12 @@ def main():
             tokenizer_kwargs=config["eval"]["tokenizer_kwargs"],
             gen_kwargs=config["eval"]["gen_kwargs"],
         )
-        qa_dataset = load_from_disk(f"result/{model_name}_{task}")
-        # qa_dataset = evaluation.loop_evaluation()
-        # evaluation.qa_dataset.to_json(
-        #     f"result/{model_name}_{task}_qa_dataset.json", orient="records", lines=True
-        # )
-        # evaluation.qa_dataset.save_to_disk(f"result/{model_name}_{task}")
+        qa_dataset = evaluation.loop_evaluation()
+        evaluation.qa_dataset.to_json(
+            f"result/{model_name}_{task}_qa_dataset.json", orient="records", lines=True
+        )
+        evaluation.qa_dataset.save_to_disk(f"result/{model_name}_{task}")
+        # qa_dataset = load_from_disk(f"result/{model_name}_{task}")
         save_score(
             qa_dataset=qa_dataset,
             metric_compute=rouge_and_bert,

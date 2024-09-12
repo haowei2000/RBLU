@@ -9,10 +9,6 @@ from typing import List
 import matplotlib.pyplot as plt
 from datasets import Dataset, load_dataset
 
-from proxy import set_proxy
-
-set_proxy()
-
 
 def rename(dataset: Dataset, candidate_column: List[str], new_column: str) -> Dataset:
     """
@@ -127,19 +123,22 @@ def load_qa(
                     raise ValueError("Invalid task")
         else:
             raise ValueError("Invalid language")
-    else:
-        dataset = load_dataset("json", data_files=str(filename), split="train")
-
-    dataset = rename(dataset, ["output", "answer", "response", "body"], "answer")
-    dataset = rename(
-        dataset, ["input", "question", "body", "selftext", "instruction"], "question"
-    )
-    dataset = dataset.filter(lambda x: min_length <= len(x["question"]) <= max_length)
-    if count is not None and len(dataset) > count:
-        dataset = dataset.select(range(count))
+        dataset = rename(dataset, ["output", "answer", "response", "body"], "answer")
+        dataset = rename(
+            dataset,
+            ["input", "question", "body", "selftext", "instruction"],
+            "question",
+        )
+        dataset = dataset.filter(
+            lambda x: min_length <= len(x["question"]) <= max_length
+        )
         dataset = dataset.remove_columns(
             [col for col in dataset.column_names if col not in ["question", "answer"]]
         )
+    else:
+        dataset = load_dataset("json", data_files=str(filename), split="train")
+    if count is not None and len(dataset) > count:
+        dataset = dataset.select(range(count))
         dataset.to_json(filename, force_ascii=False, lines=True)
     else:
         raise ValueError("Not enough data")
@@ -178,4 +177,4 @@ if __name__ == "__main__":
         print(f"Task: {task}")
         for language in ["zh"]:
             print(f"Language: {language}")
-            result = load_qa(language, task, 20, 1000, 1000, True)
+            result = load_qa(language, task, 20, 1000, 2000, True)

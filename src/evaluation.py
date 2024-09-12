@@ -249,6 +249,7 @@ class Evaluation:
             self.qa_dataset = self.qa_dataset.map(
                 self.process.question_extract, fn_kwargs={"loop": loop}
             )
+        return self.qa_dataset
 
 
 def get_score(
