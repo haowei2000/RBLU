@@ -78,3 +78,5 @@ wandb/run-20240906_164825-v93iead1/files/requirements.txt
 wandb/run-20240906_164825-v93iead1/files/wandb-metadata.json
 wandb/run-20240906_164825-v93iead1/logs/debug-internal.log
 wandb/run-20240906_164825-v93iead1/logs/debug.log
+src/__pycache__/metric.cpython-312.pyc
+src/__pycache__/data_load.cpython-312.pyc

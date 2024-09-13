@@ -4,9 +4,10 @@ sentences in parallel. This gives a near linear speed-up
 when encoding large text collections.
 """
 
-from sentence_transformers import SentenceTransformer
 import evaluate
 import torch
+from rouge_chinese import Rouge as RougeZh
+from sentence_transformers import SentenceTransformer
 
 
 def bert_score(predictions: list[str], references: list[str]) -> dict:
@@ -32,7 +33,9 @@ def bert_score(predictions: list[str], references: list[str]) -> dict:
     return {model.similarity_fn_name: float(diagonal_mean)}
 
 
-def rouge_and_bert(predictions: list[str], references: list[str]) -> dict:
+def rouge_and_bert(
+    predictions: list[str], references: list[str], language: str
+) -> dict:
     """
     Compute the Rouge and BERT scores for the given predictions and references.
 
@@ -43,8 +46,13 @@ def rouge_and_bert(predictions: list[str], references: list[str]) -> dict:
     Returns:
     - score (dict): A dictionary containing the computed Rouge and BERT scores.
     """
-    rouge = evaluate.load("rouge")
-    score = rouge.compute(predictions=predictions, references=references)
+    if language == "en":
+        rouge = evaluate.load("rouge")
+        score = rouge.compute(predictions=predictions, references=references)
+    elif language == "zh":
+        rouge = RougeZh().get_scores(predictions, references, avg=True)
+    else:
+        raise ValueError(f"Unsupported language: {language}")
     if not isinstance(score, dict):
         raise ValueError("The returned score from rouge.compute is not a dictionary")
     score.update(bert_score(predictions=predictions, references=references))
