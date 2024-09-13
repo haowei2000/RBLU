@@ -78,3 +78,16 @@ wandb/run-20240906_164825-v93iead1/files/requirements.txt
 wandb/run-20240906_164825-v93iead1/files/wandb-metadata.json
 wandb/run-20240906_164825-v93iead1/logs/debug-internal.log
 wandb/run-20240906_164825-v93iead1/logs/debug.log
+data/en_code.json
+data/en_financial.json
+data/en_medical.json
+data/zh_code.json
+data/en_legal.json
+data/zh_financial.json
+data/zh_legal.json
+data/zh_medical.json
+src/__pycache__/proxy.cpython-311.pyc
+src/__pycache__/data_load.cpython-311.pyc
+src/__pycache__/evaluation.cpython-311.pyc
+src/__pycache__/process.cpython-311.pyc
+src/__pycache__/metric.cpython-311.pyc

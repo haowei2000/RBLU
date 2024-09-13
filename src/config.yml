@@ -1,7 +1,3 @@
-mongo:
-  ip_address: 10.48.48.7
-  port: 27017
-  database: llm_evaluation
 data:
   doc_count: 500
   min_length: 25

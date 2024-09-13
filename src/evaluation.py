@@ -96,20 +96,14 @@ class MyGenerator:
         """
         start_time = time.time()
         batch_encoding = self.tokenize_texts(text_list)
-        dataset = TokenizedDataset(
-            batch_encoding["input_ids"], batch_encoding["attention_mask"]
-        )
-        dataloader = DataLoader(
-            dataset=dataset, batch_size=self.batch_size, shuffle=False
-        )
+        dataset = TokenizedDataset(batch_encoding["input_ids"], batch_encoding["attention_mask"])
+        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
         responses = []
         for inputs in tqdm(dataloader, desc="Generating responses"):
             # Directly use generate() and tokenizer.decode() to get the output.
             # Use `max_new_tokens` to control the maximum output length.
             with torch.no_grad():
-                inputs = {
-                    key: tensor.to(self.model.device) for key, tensor in inputs.items()
-                }
+                inputs = {key: tensor.to(self.model.device) for key, tensor in inputs.items()}
                 outputs = self.model.generate(**inputs, **self.gen_kwargs)
                 outputs = [
                     self.tokenizer.decode(
@@ -156,99 +150,28 @@ class MyGenerator:
         return tokenized_batch
 
 
-class Evaluation:
-    """
-    it's contains all the steps in evaluation and compute the score
-    """
-
-    def __init__(
-        self,
-        model,
-        tokenizer,
-        metric_compute: Callable[[list, list], dict],
-        original_questions: list[str],
-        batch_size: int,
-        loop_count: int,
-        apply_template: Optional[Callable[[str], list]] = None,
-        process: Optional[Process] = None,
-        tokenizer_kwargs: Optional[dict] = None,
-        gen_kwargs: Optional[dict] = None,
-    ):
-        """
-        Initializes the evaluation class with the given parameters.
-        Args:
-            model: The model to be used for generation.
-            tokenizer: The tokenizer to be used with the model.
-            metric_compute (Callable[[list, list], dict]): A function to compute metrics given the predictions and references.
-            original_questions (list[str]): A list of original questions to be used for evaluation.
-            batch_size (int): The batch size for generation.
-            loop_count (int): The number of loops to run the evaluation.
-            apply_template (Optional[Callable[[str], list]], optional): A function to apply a template to the questions. Defaults to None.
-            process (Optional[Process], optional): A process instance to be used. Defaults to None.
-            gen_kwargs (Optional[dict], optional): Additional keyword arguments for generation. Defaults to None.
-        """
-        self.generator = MyGenerator(
-            model=model,
-            tokenizer=tokenizer,
-            batch_size=batch_size,
-            apply_template=apply_template,
-            tokenizer_kwargs=tokenizer_kwargs,
-            gen_kwargs=gen_kwargs,
-        )
-        self.qa_dataset = Dataset.from_dict({"q0": original_questions})
-        self.loop_count = loop_count
-        if process is None:
-            self.process = Process()
-        else:
-            self.process = process
-
-    def loop_evaluation(self):
-        """
-        Executes a looped evaluation process on the QA dataset.
-
-        This method iterates over a specified number of loops (`self.loop_count`), performing a series of transformations
-        and evaluations on the `self.qa_dataset` at each iteration. The process involves mapping question templates,
-        generating outputs, extracting answers, and mapping answer templates.
-
-        Steps performed in each loop:
-        1. Maps the `question_template` function to the dataset with the current loop index.
-        2. Adds a new column with generated output based on the current loop's question prompt.
-        3. Maps the `answer_extract` function to the dataset with the current loop index.
-        4. Maps the `answer_template` function to the dataset with the current loop index.
-        5. Adds a new column with generated output based on the current loop's answer prompt.
-        6. Maps the `question_extract` function to the dataset with the current loop index.
-
-        Attributes:
-            self.loop_count (int): The number of loops to perform.
-            self.qa_dataset (Dataset): The dataset to be evaluated.
-            self.process (Process): An object containing the processing functions.
-            self.generator (Callable): A function to generate outputs based on prompts.
-
-        Returns:
-            None
-        """
-        for loop in range(self.loop_count):
-            print("Loop:", loop)
-            self.qa_dataset = self.qa_dataset.map(
-                self.process.question_template, fn_kwargs={"loop": loop}
-            )
-            self.qa_dataset = self.qa_dataset.add_column(
-                name=f"a{loop}_output",
-                column=self.generator(self.qa_dataset[f"q{loop}_prompt"]),
-            )  # type: ignore
-            self.qa_dataset = self.qa_dataset.map(
-                self.process.answer_extract, fn_kwargs={"loop": loop}
-            )
-            self.qa_dataset = self.qa_dataset.map(
-                self.process.answer_template, fn_kwargs={"loop": loop}
-            )
-            self.qa_dataset = self.qa_dataset.add_column(
-                name=f"q{loop+1}_output",
-                column=self.generator(self.qa_dataset[f"a{loop}_prompt"]),
-            )  # type: ignore
-            self.qa_dataset = self.qa_dataset.map(
-                self.process.question_extract, fn_kwargs={"loop": loop}
-            )
+def evaluate(
+    generator: Callable[[list[str]], list[str]],
+    original_questions: list[str],
+    loop_count: int,
+    process: Process,
+) -> Dataset:
+    qa_dataset = Dataset.from_dict({"q0": original_questions})
+    for loop in range(loop_count):
+        print("Loop:", loop)
+        qa_dataset = qa_dataset.map(process.question_template, fn_kwargs={"loop": loop})
+        qa_dataset = qa_dataset.add_column(
+            name=f"a{loop}_output",
+            column=generator(qa_dataset[f"q{loop}_prompt"]),
+        )  # type: ignore
+        qa_dataset = qa_dataset.map(process.answer_extract, fn_kwargs={"loop": loop})
+        qa_dataset = qa_dataset.map(process.answer_template, fn_kwargs={"loop": loop})
+        qa_dataset = qa_dataset.add_column(
+            name=f"q{loop+1}_output",
+            column=generator(qa_dataset[f"a{loop}_prompt"]),
+        )  # type: ignore
+        qa_dataset = qa_dataset.map(process.question_extract, fn_kwargs={"loop": loop})
+        return qa_dataset
 
 
 def get_score(
@@ -292,9 +215,7 @@ def get_score(
     return score
 
 
-def save_score(
-    qa_dataset, metric_compute, loop_count, model_name, task, language, path
-):
+def save_score(qa_dataset, metric_compute, loop_count, model_name, task, language, path):
     """
     Save the score to the disk.
     """
