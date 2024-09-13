@@ -1,3 +1,11 @@
+language: en
+task_list:
+  # - legal
+  - financial
+  - medical
+  - code
+batch_size: 8
+loop: 5
 data:
   doc_count: 500
   min_length: 1
@@ -9,19 +17,10 @@ model:
     # gemma: /public/model/hub/AI-ModelScope/gemma-2-9b-it
     chatglm: /public/model/hub/ZhipuAI/glm-4-9b-chat
     qwen: /public/model/hub/qwen/qwen2-7b-instruct
-eval:
-  language: en
-  task_list:
-    # - legal
-    - financial
-    - medical
-    - code
-  batch_size: 8
-  loop: 5
-  tokenizer_kwargs:
-    padding: True
+tokenizer_kwargs:
+  padding: True
     # max_length: 1024
     # truncation: True
-    add_special_tokens: True
-  gen_kwargs:
-    max_new_tokens: 1024
+  add_special_tokens: True
+gen_kwargs:
+  max_new_tokens: 1024

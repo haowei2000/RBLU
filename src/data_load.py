@@ -174,7 +174,6 @@ if __name__ == "__main__":
         "financial",
         "legal",
     ]:
-        print(f"Task: {task}")
         for language in ["zh", "en"]:
             print(f"Language: {language}")
             result = load_qa(language, task, 20, 1000, 2000, True)
