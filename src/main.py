@@ -1,7 +1,10 @@
 """a evaluation module for LLAMA3.1 evaluation"""
 
+import os
+
 import torch
 import yaml
+from datasets import load_from_disk
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 import wandb
@@ -63,7 +66,11 @@ def main():
             tokenizer_kwargs=config["eval"]["tokenizer_kwargs"],
             gen_kwargs=config["eval"]["gen_kwargs"],
         )
-        qa_dataset = evaluation.loop_evaluation()
+        result_path = f"result/{model_name}_{task}"
+        if os.path.exists(result_path):
+            qa_dataset = load_from_disk(result_path)
+        else:
+            qa_dataset = evaluation.loop_evaluation()
         evaluation.qa_dataset.to_json(
             f"result/{model_name}_{task}_qa_dataset.json", orient="records", lines=True
         )
