@@ -3,6 +3,7 @@ a script to load data from different sources and save it to csv
 folder path is ./data
 """
 
+from pathlib import Path
 from typing import List
 
 import matplotlib.pyplot as plt
