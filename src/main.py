@@ -70,7 +70,9 @@ def main():
         output_path = os.path.join("result", f"{model_name}_{task}_{language}")
         if os.path.exists(output_path):
             print(f"Loading dataset from {output_path}")
-            qa_dataset = datasets.load_from_disk(output_path)
+            qa_dataset = datasets.load_dataset(
+                "json", data_files=f"{output_path}.json"
+            )["train"]
         else:
             qa_dataset = evaluate(
                 generator=generator,
