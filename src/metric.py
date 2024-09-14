@@ -50,8 +50,7 @@ def detect_language(text: str) -> str:
     """
     if any("\u4e00" <= char <= "\u9fff" for char in text):
         return "chinese"
-    else:
-        return "english"
+    return "english"
 
 
 def rouge_and_bert(predictions: list[str], references: list[str]) -> dict:
