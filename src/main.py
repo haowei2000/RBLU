@@ -52,10 +52,9 @@ def main():
     # )
     with open("src/config.yml", "r", encoding="utf-8") as config_file:
         config = yaml.load(config_file, Loader=yaml.FullLoader)
-    loop_count = config["loop"]
+    loop_count = config["loop_count"]
     model_name = config["model"]["model_name"]
     language = config["language"]
-    generator = create_generator(config)
     for task in config["task_list"]:  # , 'medical', :
         print(f"{model_name}:{task}:{language}")
         original_questions, _ = load_qa(
@@ -70,10 +69,9 @@ def main():
         output_path = os.path.join("result", f"{model_name}_{task}_{language}")
         if os.path.exists(output_path):
             print(f"Loading dataset from {output_path}")
-            qa_dataset = datasets.load_dataset(
-                "json", data_files=f"{output_path}.json"
-            )["train"]
+            qa_dataset = datasets.load_from_disk(output_path)
         else:
+            generator = create_generator(config)
             qa_dataset = evaluate(
                 generator=generator,
                 original_questions=original_questions,
@@ -85,7 +83,7 @@ def main():
             # Save the dataset to a JSON file
             qa_dataset.to_json(f"{output_path}.json")
         # Save qa_dataset to disk as a JSON file
-        save_score(
+        score = save_score(
             qa_dataset,
             metric_compute=rouge_and_bert,
             loop_count=loop_count,
@@ -94,6 +92,7 @@ def main():
             language=language,
             path=os.path.join("score", f"{model_name}_{task}_{language}_scores.csv"),
         )
+        print(score)
     # wandb.finish()
 
 

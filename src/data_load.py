@@ -10,7 +10,12 @@ import matplotlib.pyplot as plt
 from datasets import Dataset, load_dataset
 
 
-def rename(dataset: Dataset, candidate_column: List[str], new_column: str) -> Dataset:
+def rename(
+    dataset: Dataset,
+    candidate_column: List[str],
+    new_column: str,
+    ignore_columns: list[str],
+) -> Dataset:
     """
     Renames columns in a dataset based on candidate column names and a new column name.
 
@@ -28,6 +33,10 @@ def rename(dataset: Dataset, candidate_column: List[str], new_column: str) -> Da
     Returns:
         Dataset: The modified dataset with the renamed column.
     """
+    if ignore_columns:
+        dataset = dataset.remove_columns(
+            [col for col in ignore_columns if col in dataset.column_names]
+        )
     dataset = dataset.rename_columns({col: col.lower() for col in dataset.column_names})
     fields = []
     for name in candidate_column:
@@ -59,6 +68,7 @@ def load_qa(
     max_length: int = 100,
     count: int = None,
     from_remote=True,
+    ignore_columns: List[str] = None,
 ) -> tuple[list[str], list[str]]:
     """
     Load data based on the specified field.
