@@ -44,3 +44,5 @@ exclude = '''
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+[tool.isort]
+profile = "black"
