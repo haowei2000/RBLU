@@ -30,7 +30,7 @@ def bert_score(predictions: list[str], references: list[str]) -> dict:
     score = {}
     for score_name in ["dot", "cosine", "euclidean", "manhattan"]:
         model.similarity_fn_name = score_name
-        score[score_name] = float(
+        score[model.similarity_fn_name] = float(
             model.similarity_pairwise(
                 predictions_embeddings, references_embeddings
             ).mean()
