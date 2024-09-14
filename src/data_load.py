@@ -14,7 +14,7 @@ def rename(
     dataset: Dataset,
     candidate_column: List[str],
     new_column: str,
-    ignore_columns: list[str],
+    ignore_columns: list[str] = None,
 ) -> Dataset:
     """
     Renames columns in a dataset based on candidate column names and a new column name.
