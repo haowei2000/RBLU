@@ -1,28 +1,19 @@
 """a evaluation module for LLAMA3.1 evaluation"""
 
+import os
+
+import datasets
 import torch
 import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-import wandb
 from data_load import load_qa
-from evaluation import Evaluation
+from evaluation import MyGenerator, evaluate, save_score
 from metric import rouge_and_bert
-from process import apply_default_template, apply_gemma_template
-from proxy import close_proxy, set_proxy
+from process import Process, apply_default_template, apply_gemma_template
 
 
-def main():
-    # os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(
-        # set the wandb project where this run will be logged
-        project="llm_evaluation",
-    )
-    set_proxy()
-    with open("src/config.yml", "r", encoding="utf-8") as config_file:
-        config = yaml.load(config_file, Loader=yaml.FullLoader)
-    loop = config["eval"]["loop"]
-    batch_size = config["eval"]["batch_size"]
+def create_generator(config):
     model_name = config["model"]["model_name"]
     model_checkpoint = config["model"]["model_path"][model_name]
     if model_name == "gemma":
@@ -42,49 +33,68 @@ def main():
     )
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
-    for task in config["eval"]["task_list"]:  # , 'medical', :
-        print(f"{model_name}:{task}")
+    generator = MyGenerator(
+        model=model,
+        tokenizer=tokenizer,
+        batch_size=config["batch_size"],
+        apply_template=apply_template,
+        tokenizer_kwargs=config["tokenizer_kwargs"],
+        gen_kwargs=config["gen_kwargs"],
+    )
+    return generator
+
+
+def main():
+    os.environ["WANDB_MODE"] = "dryrun"
+    # wandb.init(
+    #     # set the wandb project where this run will be logged
+    #     project="llm_evaluation",
+    # )
+    with open("src/config.yml", "r", encoding="utf-8") as config_file:
+        config = yaml.load(config_file, Loader=yaml.FullLoader)
+    loop_count = config["loop"]
+    model_name = config["model"]["model_name"]
+    language = config["language"]
+    generator = create_generator(config)
+    for task in config["task_list"]:  # , 'medical', :
+        print(f"{model_name}:{task}:{language}")
         original_questions, _ = load_qa(
-            language=config["eval"]["language"],
+            language=language,
             task=task,
             count=config["data"]["doc_count"],
             min_length=config["data"]["min_length"],
             max_length=config["data"]["max_length"],
-            from_remote=False,
+            from_remote=True,
         )
-        evaluation = Evaluation(
-            model=model,
-            tokenizer=tokenizer,
+        # Check if qa_dataset already exists locally
+        output_path = os.path.join("result", f"{model_name}_{task}_{language}")
+        if os.path.exists(output_path):
+            print(f"Loading dataset from {output_path}")
+            qa_dataset = datasets.load_dataset(
+                "json", data_files=f"{output_path}.json"
+            )["train"]
+        else:
+            qa_dataset = evaluate(
+                generator=generator,
+                original_questions=original_questions,
+                loop_count=loop_count,
+                process=Process(),
+            )
+            # Save the dataset to disk
+            qa_dataset.save_to_disk(output_path)
+            # Save the dataset to a JSON file
+            qa_dataset.to_json(f"{output_path}.json")
+        # Save qa_dataset to disk as a JSON file
+        save_score(
+            qa_dataset,
             metric_compute=rouge_and_bert,
-            original_questions=original_questions,
-            batch_size=batch_size,
-            loop_count=loop,
-            apply_template=apply_template,
-            tokenizer_kwargs=config["eval"]["tokenizer_kwargs"],
-            gen_kwargs=config["eval"]["gen_kwargs"],
+            loop_count=loop_count,
+            model_name=model_name,
+            task=task,
+            language=language,
+            path=os.path.join("score", f"{model_name}_{task}_{language}_scores.csv"),
         )
-        # evaluation.qa_dataset = load_from_disk(f'result/{model_name}_{field}')
-        evaluation.loop_evaluation()
-        score = evaluation.get_score(1, "q", "0")
-        print(score)
-        evaluation.qa_dataset.to_json(
-            f"result/{model_name}_{task}_qa_dataset.json", orient="records", lines=True
-        )
-        evaluation.qa_dataset.save_to_disk(f"result/{model_name}_{task}")
-        # evaluation.get_score()
-        # print(evaluation.result.scores)
-        # print('start to save the score')
-        # evaluation.save_score(path=f'./score/{model_name}_{field}_scores.csv')
-        # current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
-        # database = pymongo.MongoClient('10.48.48.7', 27017)['llm_evaluation'][
-        #     f'{model_name}_{field}_{current_time}'
-        # ]
-        # # evaluation.load_from_db(database)
-        # # print(evaluation.result.questions)
-        # print('start to save the QA')
-        # evaluation.write_qa2db(database)
-    wandb.finish()
-    close_proxy()
+    # wandb.finish()
 
 
 if __name__ == "__main__":

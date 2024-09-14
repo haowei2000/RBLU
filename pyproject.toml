@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "your_project_name"
+version = "0.1.0"
+description = "A short description of your project"
+authors = [
+    { name="Your Name", email="your.email@example.com" }
+]
+readme = "README.md"
+requires-python = ">=3.7"
+license = { text = "MIT" }
+
+dependencies = [
+    "requests>=2.25.1",
+    "pandas>=1.2.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "black>=20.8b1",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
