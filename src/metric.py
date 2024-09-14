@@ -6,7 +6,6 @@ when encoding large text collections.
 
 import evaluate
 import jieba
-import torch
 from rouge_chinese import Rouge
 from sentence_transformers import SentenceTransformer
 
@@ -25,13 +24,18 @@ def bert_score(predictions: list[str], references: list[str]) -> dict:
     # Define the model
     model = SentenceTransformer("all-MiniLM-L6-v2", device="cuda")
     # Compute the embeddings using the multi-process pool
-    predictions_embeddings = model.encode(predictions, normalize_embeddings=True)
-    references_embeddings = model.encode(references, normalize_embeddings=True)
-    predictions_embeddings = torch.tensor(predictions_embeddings)
-    references_embeddings = torch.tensor(references_embeddings)
-    matrix = model.similarity(predictions_embeddings, references_embeddings)
-    diagonal_mean = matrix.diagonal().mean()
-    return {model.similarity_fn_name: float(diagonal_mean)}
+    predictions_embeddings = model.encode(predictions, normalize_embeddings=False)
+    references_embeddings = model.encode(references, normalize_embeddings=False)
+    # Compute cosine similarity using SentenceTransformer's built-in function
+    score = {}
+    for score_name in ["dot", "cosine", "euclidean", "manhattan"]:
+        model.similarity_fn_name = score_name
+        score[score_name] = float(
+            model.similarity_pairwise(
+                predictions_embeddings, references_embeddings
+            ).mean()
+        )
+    return score
 
 
 def detect_language(text: str) -> str:

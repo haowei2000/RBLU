@@ -178,7 +178,7 @@ def evaluate(
             column=generator(qa_dataset[f"a{loop}_prompt"]),
         )  # type: ignore
         qa_dataset = qa_dataset.map(process.question_extract, fn_kwargs={"loop": loop})
-        return qa_dataset
+    return qa_dataset
 
 
 def get_score(
@@ -204,21 +204,21 @@ def get_score(
         ValueError: If the refer is not "n-1" or "0".
         ValueError: If the loop is less than 1.
     """
-    predictions, references = [], []
     if loop >= 1:
         if mode in ["q", "a"]:
             predictions = qa_dataset[f"{mode}{loop}"]
             if refer == "n-1":
                 references = qa_dataset[f"{mode}{loop-1}"]
+                score = metric_compute(predictions, references)
             elif refer == "0":
                 references = qa_dataset[f"{mode}{0}"]
+                score = metric_compute(predictions, references)
             else:
                 print("Refer error")
         else:
             print("mode error")
     else:
         print("Loop error")
-    score = metric_compute(predictions, references)
     return score
 
 
@@ -232,6 +232,7 @@ def save_score(
     for loop in range(1, loop_count):
         for mode in ["q", "a"]:
             for refer in ["n-1", "0"]:
+                print("Loop:", loop, "Mode:", mode, "Refer:", refer)
                 score = get_score(qa_dataset, metric_compute, loop, mode, refer)
                 score["loop"] = loop
                 score["refer"] = refer
@@ -242,4 +243,4 @@ def save_score(
                 scores.append(score)
     df = pd.DataFrame(scores)
     df.to_csv(path, index=False)
-    return qa_dataset
+    return df
