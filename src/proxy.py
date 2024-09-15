@@ -1,6 +1,4 @@
-"""
-set the system proxy on linux to use the transformers pickle
-"""
+"""set the system proxy on linux to use the transformers pickle"""
 
 import os
 

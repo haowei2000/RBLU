@@ -1,6 +1,4 @@
-"""
-the default process
-"""
+"""the default process"""
 
 from typing import Callable
 

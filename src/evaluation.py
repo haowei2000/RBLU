@@ -225,9 +225,7 @@ def get_score(
 def save_score(
     qa_dataset, metric_compute, loop_count, model_name, task, language, path
 ):
-    """
-    Save the score to the disk.
-    """
+    """Save the score to the disk."""
     scores = []
     for loop in range(1, loop_count):
         for mode in ["q", "a"]:
