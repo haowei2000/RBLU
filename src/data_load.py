@@ -51,9 +51,11 @@ def rename(
     elif len(fields) > 1:
         answer_field = fields[0]
         for additional_field in fields[1:]:
-            dataset = dataset.map(
-                lambda x: {answer_field: x[answer_field] + " " + x[additional_field]}
-            )
+            for additional_field in fields[1:]:
+                answer_field_value = answer_field
+                dataset = dataset.map(
+                    lambda x, additional_field=additional_field, answer_field_value=answer_field_value: {answer_field_value: x[answer_field_value] + " " + x[additional_field]}
+                )
         if new_column in dataset.column_names:
             dataset = dataset.map(lambda x: {new_column: x[answer_field]})
         else:

@@ -51,7 +51,7 @@ def main():
     #     project="llm_evaluation",
     # )
     with open("src/config.yml", "r", encoding="utf-8") as config_file:
-        config = yaml.safe_load(config_file, Loader=yaml.FullLoader)
+        config = yaml.safe_load(config_file)
     loop_count = config["loop_count"]
     model_name = config["model"]["model_name"]
     language = config["language"]
