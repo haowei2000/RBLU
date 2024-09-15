@@ -7,10 +7,10 @@ import torch
 import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from data_load import load_qa
-from evaluation import MyGenerator, evaluate, save_score
-from metric import rouge_and_bert
-from process import (
+from llm_evaluation.data_load import load_qa
+from llm_evaluation.evaluation import MyGenerator, evaluate, save_score
+from llm_evaluation.metric import rouge_and_bert
+from llm_evaluation.process import (
     Process,
     apply_default_template,
     apply_gemma_template,
@@ -54,12 +54,16 @@ def main():
     #     # set the wandb project where this run will be logged
     #     project="llm_evaluation",
     # )
-    with open("src/config.yml", "r", encoding="utf-8") as config_file:
+    with open(
+        os.path.join("src", "llm_evaluation", "config.yml"),
+        "r",
+        encoding="utf-8",
+    ) as config_file:
         config = yaml.safe_load(config_file)
     loop_count = config["loop_count"]
     model_name = config["model"]["model_name"]
     language = config["language"]
-    for task in config["task_list"]:  # , 'medical', :
+    for task in config["task_list"]:
         print(f"{model_name}:{task}:{language}")
         original_questions, _ = load_qa(
             language=language,
@@ -70,14 +74,12 @@ def main():
             from_remote=True,
         )
         # Check if qa_dataset already exists locally
-        output_path = os.path.join(
-            "result", f"{model_name}_{task}_{language}"
-        )
+        output_path = os.path.join("result", f"{model_name}_{task}_{language}")
         if os.path.exists(output_path):
             print(f"Loading dataset from {output_path}")
             qa_dataset = datasets.load_from_disk(output_path)
         else:
-            generator = create_generator(config)
+            generator = create_generator(config=config)
             qa_dataset = evaluate(
                 generator=generator,
                 original_questions=original_questions,

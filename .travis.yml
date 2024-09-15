@@ -2,10 +2,11 @@ language: python
 python:
   - "3.12"  # Python 版本
 
-# 安装依赖
-install:
-  - pip install -r requirements.txt
+before_install:
+  - curl -sSL https://install.python-poetry.org | python -
 
-# 执行测试脚本
+install:
+  - poetry install
+
 script:
-  - pytest
+  - poetry run pytest

@@ -4,7 +4,7 @@ which is the main class for evaluating the model.
 """
 
 import time
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import pandas as pd
 import torch
@@ -17,7 +17,7 @@ from transformers import (
     PreTrainedTokenizerFast,
 )
 
-from process import Process
+from llm_evaluation.process import Process
 
 
 class TokenizedDataset(Dataset):
@@ -121,7 +121,7 @@ class MyGenerator:
             batch_encoding["input_ids"],
             batch_encoding["attention_mask"],
         )
-        dataloader = DataLoader(
+        dataloader: DataLoader[TokenizedDataset] = DataLoader(
             dataset=dataset, batch_size=self.batch_size, shuffle=False
         )
         responses = []
@@ -142,11 +142,11 @@ class MyGenerator:
                 responses.extend(outputs)
         end_time = time.time()
         print(
-            f"Time taken for batch generation: {end_time - start_time:.2f} seconds"
+            f"Time taken for batch gen: {end_time - start_time:.2f} seconds"
         )
         return responses
 
-    def tokenize_texts(self, text_list: list[str]) -> BatchEncoding:
+    def tokenize_texts(self, text_list: Any | list[str]) -> BatchEncoding:
         """
         Tokenize a list of texts using the specified tokenizer.
         If a template is applied, it uses the `apply_chat_template`
@@ -165,16 +165,16 @@ class MyGenerator:
               is not `BatchEncoding`.
         """
         if self.apply_template is not None:
-            text_templated_list = [
+            text_formatted_list = [
                 self.apply_template(text) for text in text_list
             ]
             text_templated_list = self.tokenizer.apply_chat_template(
-                text_templated_list,
+                text_formatted_list,
                 tokenize=False,
                 add_generation_prompt=True,
             )
         else:
-            text_templated_list = text_list
+            text_templated_list = [text_list]
         tokenized_batch = self.tokenizer.batch_encode_plus(
             text_templated_list,  # type: ignore
             return_tensors="pt",
@@ -272,9 +272,7 @@ def save_score(
     language,
     path,
 ):
-    """
-    Save the score to the disk.
-    """
+    """Save the score to the disk."""
     scores = []
     for loop in range(1, loop_count):
         for mode in ["q", "a"]:

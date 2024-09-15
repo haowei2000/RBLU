@@ -4,17 +4,17 @@ folder path is ./data
 """
 
 from pathlib import Path
-from typing import List
+from typing import Any, List
 
 import matplotlib.pyplot as plt
 from datasets import Dataset, load_dataset
 
 
-def rename(
+def rename_all_columns(
     dataset: Dataset,
     candidate_column: List[str],
     new_column: str,
-    ignore_columns: list[str] = None,
+    ignore_columns: Any | list[str] = None,
 ) -> Dataset:
     """
     Renames columns in a dataset based on candidate column names and a new
@@ -79,9 +79,9 @@ def load_qa(
     task: str,
     min_length: int = 10,
     max_length: int = 100,
-    count: int = None,
-    from_remote=True,
-    ignore_columns: List[str] = None,
+    count: Any | int = None,
+    from_remote: bool = True,
+    ignore_columns: Any | List[str] = None,
 ) -> tuple[list[str], list[str]]:
     """
     Load data based on the specified field.
@@ -133,34 +133,23 @@ def load_qa(
             else:
                 raise ValueError("Invalid task")
         elif language == "en":
+            dataset_name_dict = {
+                "medical": "Malikeh1375/medical-question-answering-datasets",
+                "financial": "winddude/reddit_finance_43_250k",
+                "legal": "ibunescu/qa_legal_dataset_val",
+                "code": "iamtarun/python_code_instructions_18k_alpaca",
+            }
             if from_remote:
-                if task == "medical":
+                if task in dataset_name_dict:
                     dataset = load_dataset(
-                        "Malikeh1375/medical-question-answering-datasets",
-                        "all-processed",
-                        split="train",
-                    )
-                    dataset = dataset.rename_column("input", "question")
-                elif task == "financial":
-                    dataset = load_dataset(
-                        "winddude/reddit_finance_43_250k",
-                        split="train",
-                    )
-                elif task == "legal":
-                    dataset = load_dataset(
-                        "ibunescu/qa_legal_dataset_val",
-                        split="validation",
-                    )
-                elif task == "code":
-                    dataset = load_dataset(
-                        "iamtarun/python_code_instructions_18k_alpaca",
+                        dataset_name_dict[task],
                         split="train",
                     )
                 else:
                     raise ValueError("Invalid task")
         else:
             raise ValueError("Invalid language")
-        dataset = rename(
+        dataset = rename_all_columns(
             dataset,
             [
                 "output",
@@ -169,8 +158,9 @@ def load_qa(
                 "body",
             ],
             "answer",
+            ignore_columns=ignore_columns,
         )
-        dataset = rename(
+        dataset = rename_all_columns(
             dataset,
             [
                 "input",
@@ -180,6 +170,7 @@ def load_qa(
                 "instruction",
             ],
             "question",
+            ignore_columns=ignore_columns,
         )
         dataset = dataset.filter(
             lambda x: min_length <= len(x["question"]) <= max_length

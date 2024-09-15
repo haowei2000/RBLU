@@ -20,5 +20,6 @@
     "black-formatter.args": [
         "--line-length=79"
     ],
-    "rewrap.autoWrap.enabled": true
+    "rewrap.autoWrap.enabled": true,
+    "mypy-type-checker.importStrategy": "fromEnvironment"
 }
