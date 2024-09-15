@@ -7,8 +7,19 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
+transformers = "^4.44.2"
+accelerate = "^0.34.2"
+datasets = "^3.0.0"
+evaluate = "^0.4.3"
+rouge-score = "^0.1.2"
+rouge-chinese = "^1.0.3"
+matplotlib = "^3.9.2"
+pandas = "^2.2.2"
 
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+llm_eval = "llm_evaluation.main:main"

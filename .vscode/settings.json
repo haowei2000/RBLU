@@ -12,5 +12,8 @@
     "pylint.importStrategy": "fromEnvironment",
     "linter.delay": 5,
     "editor.quickSuggestionsDelay": 0,
-    "deepsource.highlightAffectedLines": true
+    "deepsource.highlightAffectedLines": true,
+    "python.analysis.extraPaths": [
+        "./src/llm_evaluation"
+    ]
 }
