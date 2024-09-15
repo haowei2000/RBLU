@@ -15,8 +15,9 @@ def bert_score(predictions: list[str], references: list[str]) -> dict:
     Calculates the BERT score between the given predictions and references.
 
     Args:
-        predictions (list): A list of strings representing the predicted sentences.
-        references (list): A list of strings representing the reference sentences.
+        predictions (list): A list of strings representing the predicted
+        sentences.  references (list): A list of strings representing the
+        reference sentences.
 
     Returns:
         float: The BERT score between the predictions and references.
@@ -24,8 +25,12 @@ def bert_score(predictions: list[str], references: list[str]) -> dict:
     # Define the model
     model = SentenceTransformer("all-MiniLM-L6-v2", device="cuda")
     # Compute the embeddings using the multi-process pool
-    predictions_embeddings = model.encode(predictions, normalize_embeddings=False)
-    references_embeddings = model.encode(references, normalize_embeddings=False)
+    predictions_embeddings = model.encode(
+        predictions, normalize_embeddings=False
+    )
+    references_embeddings = model.encode(
+        references, normalize_embeddings=False
+    )
     # Compute cosine similarity using SentenceTransformer's built-in function
     score = {}
     for score_name in ["dot", "cosine", "euclidean", "manhattan"]:
@@ -46,7 +51,8 @@ def detect_language(text: str) -> str:
         text (str): The text to detect the language of.
 
     Returns:
-        str: 'chinese' if the text is in Chinese, 'english' if the text is in English.
+        str: 'chinese' if the text is in Chinese, 'english' if the text is in
+        English.
     """
     if any("\u4e00" <= char <= "\u9fff" for char in text):
         return "chinese"
@@ -57,12 +63,11 @@ def rouge_and_bert(predictions: list[str], references: list[str]) -> dict:
     """
     Compute the Rouge and BERT scores for the given predictions and references.
 
-    Parameters:
-    - predictions (list): A list of predicted texts.
-    - references (list): A list of reference texts.
+    Parameters: - predictions (list): A list of predicted texts.  - references
+    (list): A list of reference texts.
 
-    Returns:
-    - score (dict): A dictionary containing the computed Rouge and BERT scores.
+    Returns: - score (dict): A dictionary containing the computed Rouge and BERT
+    scores.
     """
     # Detect if the input is in Chinese or English
 
@@ -76,6 +81,8 @@ def rouge_and_bert(predictions: list[str], references: list[str]) -> dict:
         rouge = evaluate.load("rouge")
         score = rouge.compute(predictions=predictions, references=references)
     if not isinstance(score, dict):
-        raise ValueError("The returned score from rouge.compute is not a dictionary")
+        raise ValueError(
+            "The returned score from rouge.compute is not a dictionary"
+        )
     score.update(bert_score(predictions=predictions, references=references))
     return score

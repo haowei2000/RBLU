@@ -10,7 +10,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from data_load import load_qa
 from evaluation import MyGenerator, evaluate, save_score
 from metric import rouge_and_bert
-from process import Process, apply_default_template, apply_gemma_template
+from process import (
+    Process,
+    apply_default_template,
+    apply_gemma_template,
+)
 
 
 def create_generator(config):
@@ -66,7 +70,9 @@ def main():
             from_remote=True,
         )
         # Check if qa_dataset already exists locally
-        output_path = os.path.join("result", f"{model_name}_{task}_{language}")
+        output_path = os.path.join(
+            "result", f"{model_name}_{task}_{language}"
+        )
         if os.path.exists(output_path):
             print(f"Loading dataset from {output_path}")
             qa_dataset = datasets.load_from_disk(output_path)
@@ -90,7 +96,9 @@ def main():
             model_name=model_name,
             task=task,
             language=language,
-            path=os.path.join("score", f"{model_name}_{task}_{language}_scores.csv"),
+            path=os.path.join(
+                "score", f"{model_name}_{task}_{language}_scores.csv"
+            ),
         )
         print(score)
     # wandb.finish()

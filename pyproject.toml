@@ -1,25 +1,45 @@
 [tool.poetry]
-name = "llm-evaluation"
-version = "0.1.0"
-description = ""
 authors = ["Wang Haowei <hw_wang@whu.edu.cn>"]
+description = ""
+name = "llm-evaluation"
 readme = "README.md"
+version = "0.1.0"
 
 [tool.poetry.dependencies]
-python = "^3.12"
-transformers = "^4.44.2"
 accelerate = "^0.34.2"
 datasets = "^3.0.0"
 evaluate = "^0.4.3"
-rouge-score = "^0.1.2"
-rouge-chinese = "^1.0.3"
 matplotlib = "^3.9.2"
 pandas = "^2.2.2"
-
+python = "^3.12"
+rouge-chinese = "^1.0.3"
+rouge-score = "^0.1.2"
+transformers = "^4.44.2"
+sentence-transformers = "^3.1.0"
+jieba = "^0.42.1"
 
 [build-system]
-requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
 
 [tool.poetry.scripts]
 llm_eval = "llm_evaluation.main:main"
+
+[tool.black]
+line-length = 50
+
+[tool.ruff]
+line-length = 79
+select = ["E", "W", "F"]
+
+[tool.ruff.lint]
+ignore = ["F401"]
+select = ["E", "F"]
+
+[tool.ruff.format]
+# Format all docstring code snippets with a line length of 60.
+docstring-code-format = true
+docstring-code-line-length = 50
+quote-style = "double"
+# Use `\n` line endings for all files
+line-ending = "lf"

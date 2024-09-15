@@ -15,5 +15,10 @@
     "deepsource.highlightAffectedLines": true,
     "python.analysis.extraPaths": [
         "./src/llm_evaluation"
-    ]
+    ],
+    "format-comment.settings.maxLength": 79,
+    "black-formatter.args": [
+        "--line-length=79"
+    ],
+    "rewrap.autoWrap.enabled": true
 }
