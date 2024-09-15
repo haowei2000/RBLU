@@ -17,6 +17,7 @@ rouge-score = "^0.1.2"
 transformers = "^4.44.2"
 sentence-transformers = "^3.1.0"
 jieba = "^0.42.1"
+wandb = "^0.18.0"
 
 [build-system]
 build-backend = "poetry.core.masonry.api"

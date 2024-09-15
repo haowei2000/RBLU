@@ -3,7 +3,7 @@ task_list:
   - medical
   - legal
   - financial
-  - code
+  # - code
 batch_size: 8
 loop_count: 5
 data:
@@ -11,7 +11,7 @@ data:
   min_length: 1
   max_length: 2000
 model:
-  model_name: llama
+  model_name: qwen
   model_path:
     llama: /public/model/hub/llm-research/meta-llama-3-8b-instruct
     # gemma: /public/model/hub/AI-ModelScope/gemma-2-9b-it
@@ -19,8 +19,8 @@ model:
     qwen: /public/model/hub/qwen/qwen2-7b-instruct
 tokenizer_kwargs:
   padding: True
-  max_length: 384
+  max_length: 512
   truncation: True
   add_special_tokens: True
 gen_kwargs:
-  max_new_tokens: 364
+  max_new_tokens: 1000

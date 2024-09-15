@@ -4,6 +4,7 @@ import os
 
 import datasets
 import torch
+import wandb
 import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -49,11 +50,11 @@ def create_generator(config):
 
 
 def main():
-    os.environ["WANDB_MODE"] = "dryrun"
-    # wandb.init(
-    #     # set the wandb project where this run will be logged
-    #     project="llm_evaluation",
-    # )
+    # os.environ["WANDB_MODE"] = "dryrun"
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="llm_evaluation",
+    )
     with open(
         os.path.join("src", "llm_evaluation", "config.yml"),
         "r",
@@ -103,7 +104,7 @@ def main():
             ),
         )
         print(score)
-    # wandb.finish()
+    wandb.finish()
 
 
 if __name__ == "__main__":

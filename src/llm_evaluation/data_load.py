@@ -140,7 +140,13 @@ def load_qa(
                 "code": "iamtarun/python_code_instructions_18k_alpaca",
             }
             if from_remote:
-                if task in dataset_name_dict:
+                if task == "medical":
+                    dataset = load_dataset(
+                        dataset_name_dict[task],
+                        "all-processed",
+                        split="train",
+                    )
+                elif task in dataset_name_dict:
                     dataset = load_dataset(
                         dataset_name_dict[task],
                         split="train",
