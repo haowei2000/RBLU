@@ -17,3 +17,7 @@ src/__pycache__/data_load.cpython-311.pyc
 src/__pycache__/evaluation.cpython-311.pyc
 src/__pycache__/process.cpython-311.pyc
 src/__pycache__/metric.cpython-311.pyc
+src/__pycache__/
+src/llm_evaluation/__pycache__/
+result/
+score/
