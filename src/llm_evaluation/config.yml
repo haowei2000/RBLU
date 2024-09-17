@@ -1,5 +1,5 @@
 wandb: False # use wandb to log the results
-force_regenerate: False # forced to regenerate the data even if the result file exists
+force_regenerate: True # forced to regenerate the data even if the result file exists
 language: zh
 task_list:
   - medical
@@ -7,11 +7,6 @@ task_list:
   - financial
   # - code
 batch_size: 8
-loop_count: 3
-data: # the evaluated data config, please don't change to keep result consistent
-  doc_count: 2
-  min_length: 1
-  max_length: 2000
 model:
   model_name: glm
   model_path:
@@ -19,6 +14,14 @@ model:
     # gemma: /public/model/hub/AI-ModelScope/gemma-2-9b-it
     glm: /public/model/hub/ZhipuAI/glm-4-9b-chat
     qwen: /public/model/hub/qwen/qwen2-7b-instruct
+
+# The following is the default config for the data generation
+# Please dont change the config in the data generation script unless you know what you are doing
+loop_count: 5
+data:
+  doc_count: 500
+  min_length: 1
+  max_length: 2000
 tokenizer_kwargs:
   padding: True
   max_length: 512
