@@ -14,15 +14,22 @@ from llm_evaluation.metric import rouge_and_bert
 from llm_evaluation.process import (
     Process,
     apply_default_template,
-    apply_gemma_template,
+    apply_default_zh_template,
+    zh_answer_prompt,
+    zh_question_extractor,
+    default_question_prompt,
+    default_answer_prompt,
+    default_question_extractor,
+    default_answer_extractor,
 )
 
 
 def create_generator(config):
     model_name = config["model"]["model_name"]
     model_checkpoint = config["model"]["model_path"][model_name]
-    if model_name == "gemma":
-        apply_template = apply_gemma_template
+    language = config["language"]
+    if language == "zh":
+        apply_template = apply_default_zh_template
     else:
         apply_template = apply_default_template
     model = AutoModelForCausalLM.from_pretrained(
@@ -50,20 +57,38 @@ def create_generator(config):
 
 
 def main():
-    # os.environ["WANDB_MODE"] = "dryrun"
-    wandb.init(
-        # set the wandb project where this run will be logged
-        project="llm_evaluation",
-    )
     with open(
         os.path.join("src", "llm_evaluation", "config.yml"),
         "r",
         encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)
+    if config["wandb"]:
+        wandb.init(
+            project="llm-evaluation",
+            config=config,
+            tags=[config["model"]["model_name"]],
+        )
+    else:
+        os.environ["WANDB_MODE"] = "dryrun"
+        wandb.init(mode="disabled")
     loop_count = config["loop_count"]
     model_name = config["model"]["model_name"]
     language = config["language"]
+    if language == "zh":
+        process = Process(
+            question_extract=zh_question_extractor,
+            answer_extract=default_answer_extractor,
+            question_prompt=default_question_prompt,
+            answer_prompt=zh_answer_prompt,
+        )
+    else:
+        process = Process(
+            question_extract=default_question_extractor,
+            answer_extract=default_answer_extractor,
+            question_prompt=default_question_prompt,
+            answer_prompt=default_answer_prompt,
+        )
     for task in config["task_list"]:
         print(f"{model_name}:{task}:{language}")
         original_questions, _ = load_qa(
@@ -76,22 +101,25 @@ def main():
         )
         # Check if qa_dataset already exists locally
         output_path = os.path.join("result", f"{model_name}_{task}_{language}")
-        if os.path.exists(output_path):
+        if (
+            os.path.exists(output_path)
+            and config["force_regenerate"] is False
+        ):
             print(f"Loading dataset from {output_path}")
             qa_dataset = datasets.load_from_disk(output_path)
+            qa_dataset.to_json(f"{output_path}.json", force_ascii=False)
         else:
             generator = create_generator(config=config)
             qa_dataset = evaluate(
                 generator=generator,
                 original_questions=original_questions,
                 loop_count=loop_count,
-                process=Process(),
+                process=process,
             )
             # Save the dataset to disk
             qa_dataset.save_to_disk(output_path)
             # Save the dataset to a JSON file
-            qa_dataset.to_json(f"{output_path}.json")
-        # Save qa_dataset to disk as a JSON file
+            qa_dataset.to_json(f"{output_path}.json", force_ascii=False)
         score = save_score(
             qa_dataset,
             metric_compute=rouge_and_bert,

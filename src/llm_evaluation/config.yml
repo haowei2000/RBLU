@@ -1,17 +1,19 @@
-language: en
+wandb: False # use wandb to log the results
+force_regenerate: False # forced to regenerate the data even if the result file exists
+language: zh
 task_list:
   - medical
   - legal
   - financial
   # - code
 batch_size: 8
-loop_count: 5
-data:
-  doc_count: 500
+loop_count: 3
+data: # the evaluated data config, please don't change to keep result consistent
+  doc_count: 2
   min_length: 1
   max_length: 2000
 model:
-  model_name: qwen
+  model_name: glm
   model_path:
     llama: /public/model/hub/llm-research/meta-llama-3-8b-instruct
     # gemma: /public/model/hub/AI-ModelScope/gemma-2-9b-it

@@ -1,6 +1,7 @@
 """the default process"""
 
 from typing import Callable
+from dataclasses import dataclass
 
 
 def default_question_extractor(example, loop) -> str:
@@ -18,6 +19,27 @@ def default_question_extractor(example, loop) -> str:
     question = example[f"q{loop + 1}_output"]
     question = question.replace(answer, "", 1)
     split_text = question.split("The question is most likely")
+    if len(split_text) > 1:
+        question = split_text[-1].strip()
+    example[f"q{loop + 1}"] = question
+    return example
+
+
+def zh_question_extractor(example, loop) -> str:
+    """
+    Extracts the default question from a given string.
+
+    Parameters:
+    q (str): The input string containing the question.
+
+    Returns:
+    str: The extracted default question.
+
+    """
+    answer = example[f"a{loop}"]
+    question = example[f"q{loop + 1}_output"]
+    question = question.replace(answer, "", 1)
+    split_text = question.split("该回答最可能的问题是：")
     if len(split_text) > 1:
         question = split_text[-1].strip()
     example[f"q{loop + 1}"] = question
@@ -100,6 +122,33 @@ def default_answer_prompt(example, loop):
     return example
 
 
+def zh_answer_prompt(example, loop):
+    """
+    Generates a prompt for a given example and loop index.
+
+    This function takes an example dictionary and a loop index, retrieves the
+    answer corresponding to the loop index, formats it into a specific prompt
+    template, and adds the formatted prompt back into the example dictionary
+    with a new key.
+
+    Args:
+        example (dict): A dictionary containing the example data. loop (int):
+        The loop index to retrieve the answer from the example.
+
+    Returns:
+        dict: The updated example dictionary with the new prompt added.
+    """
+    answer = example[f"a{loop}"]
+    answer = (
+        "下面的内容来自一段对话的回答，"
+        "该回答最可能的问题是什么？"
+        "(请用下面的格式回答:该回答最可能的问题是......)\n\n"
+        f"{answer}"
+    )
+    example[f"a{loop}_prompt"] = answer
+    return example
+
+
 def apply_default_template(user_input: str) -> list:
     """
     Generates a default message template for a Q&A bot.
@@ -123,6 +172,14 @@ def apply_default_template(user_input: str) -> list:
     return message
 
 
+def apply_default_zh_template(uses_input: str) -> list:
+    message = [
+        {"role": "system", "content": "你是一个聊天问答机器人"},
+        {"role": "user", "content": uses_input},
+    ]
+    return message
+
+
 def apply_gemma_template(user_input: str) -> list:
     """
     Generates a gemma message template.
@@ -142,20 +199,14 @@ def apply_gemma_template(user_input: str) -> list:
     return message
 
 
+@dataclass
 class Process:
     """
     a class to save the optional function in the evaluation,
     if not specified, we will create a default "Process"
     """
 
-    def __init__(
-        self,
-        question_extract: Callable = default_question_extractor,
-        answer_extract: Callable = default_answer_extractor,
-        question_prompt: Callable = default_question_prompt,
-        answer_prompt: Callable = default_answer_prompt,
-    ) -> None:
-        self.question_extract = question_extract
-        self.answer_extract = answer_extract
-        self.question_template = question_prompt
-        self.answer_template = answer_prompt
+    question_extract: Callable = default_question_extractor
+    answer_extract: Callable = default_answer_extractor
+    question_prompt: Callable = default_question_prompt
+    answer_prompt: Callable = default_answer_prompt

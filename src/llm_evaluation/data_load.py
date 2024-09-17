@@ -134,22 +134,28 @@ def load_qa(
                 raise ValueError("Invalid task")
         elif language == "en":
             dataset_name_dict = {
-                "medical": "Malikeh1375/medical-question-answering-datasets",
-                "financial": "winddude/reddit_finance_43_250k",
-                "legal": "ibunescu/qa_legal_dataset_val",
-                "code": "iamtarun/python_code_instructions_18k_alpaca",
+                "medical": {
+                    "path": "Malikeh1375/medical-question-answering-datasets",
+                    "name": "all-processed",
+                    "split": "train",
+                },
+                "financial": {
+                    "path": "winddude/reddit_finance_43_250k",
+                    "split": "train",
+                },
+                "legal": {
+                    "path": "ibunescu/qa_legal_dataset_val",
+                    "split": "validation",
+                },
+                "code": {
+                    "path": "jtatman/python-code-dataset-500k",
+                    "split": "train",
+                },
             }
             if from_remote:
-                if task == "medical":
+                if task in dataset_name_dict.keys():
                     dataset = load_dataset(
-                        dataset_name_dict[task],
-                        "all-processed",
-                        split="train",
-                    )
-                elif task in dataset_name_dict:
-                    dataset = load_dataset(
-                        dataset_name_dict[task],
-                        split="train",
+                        **dataset_name_dict[task],
                     )
                 else:
                     raise ValueError("Invalid task")
@@ -234,17 +240,17 @@ def plot_string_length_distribution(
 
 if __name__ == "__main__":
     for task in [
-        "code",
+        # "code",
         "medical",
         "financial",
         "legal",
     ]:
-        for language in ["zh", "en"]:
+        for language in ["en"]:
             print(f"Language: {language}")
             result = load_qa(
                 language,
                 task,
-                20,
+                10,
                 1000,
                 2000,
                 True,

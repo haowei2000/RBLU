@@ -195,7 +195,7 @@ def evaluate(
     for loop in range(loop_count):
         print("Loop:", loop)
         qa_dataset = qa_dataset.map(
-            process.question_template, fn_kwargs={"loop": loop}
+            process.question_prompt, fn_kwargs={"loop": loop}
         )
         qa_dataset = qa_dataset.add_column(
             name=f"a{loop}_output",
@@ -205,7 +205,7 @@ def evaluate(
             process.answer_extract, fn_kwargs={"loop": loop}
         )
         qa_dataset = qa_dataset.map(
-            process.answer_template, fn_kwargs={"loop": loop}
+            process.answer_prompt, fn_kwargs={"loop": loop}
         )
         qa_dataset = qa_dataset.add_column(
             name=f"q{loop + 1}_output",
