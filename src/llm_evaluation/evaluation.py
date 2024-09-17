@@ -94,6 +94,7 @@ class MyGenerator:
         )
         self.tokenizer_kwargs = tokenizer_kwargs
         self.gen_kwargs = gen_kwargs
+        self.device = next(model.parameters()).device
 
     def __call__(self, text_list: list[str]) -> list[str]:
         """
@@ -121,29 +122,22 @@ class MyGenerator:
             batch_encoding["input_ids"],
             batch_encoding["attention_mask"],
         )
-        dataloader: DataLoader[TokenizedDataset] = DataLoader(
+        dataloader = DataLoader(
             dataset=dataset, batch_size=self.batch_size, shuffle=False
         )
+        
         responses = []
         for inputs in tqdm(dataloader, desc="Generating responses"):
             with torch.no_grad():
-                inputs = {
-                    key: tensor.to(self.model.device)
-                    for key, tensor in inputs.items()
-                }
+                inputs = {key: tensor.to(self.device) for key, tensor in inputs.items()}
                 outputs = self.model.generate(**inputs, **self.gen_kwargs)
-                outputs = [
-                    self.tokenizer.decode(
-                        output[inputs["input_ids"].size(1) :],
-                        skip_special_tokens=True,
-                    )
-                    for output in outputs
-                ]
-                responses.extend(outputs)
-        end_time = time.time()
-        print(
-            f"Time taken for batch gen: {end_time - start_time:.2f} seconds"
-        )
+                decoded_outputs = self.tokenizer.batch_decode(
+                    outputs[:, inputs["input_ids"].size(1):],
+                    skip_special_tokens=True,
+                )
+                responses.extend(decoded_outputs)
+        
+        print(f"Time taken for batch gen: {time.time() - start_time:.2f} seconds")
         return responses
 
     def tokenize_texts(self, text_list: Any | list[str]) -> BatchEncoding:
@@ -193,24 +187,23 @@ def evaluate(
 ) -> Dataset:
     qa_dataset = Dataset.from_dict({"q0": original_questions})
     for loop in range(loop_count):
-        print("Loop:", loop)
+        print(f"Loop: {loop}")
         qa_dataset = qa_dataset.map(
             process.question_prompt, fn_kwargs={"loop": loop}
         )
         qa_dataset = qa_dataset.add_column(
             name=f"a{loop}_output",
             column=generator(qa_dataset[f"q{loop}_prompt"]),
-        )  # type: ignore
-        qa_dataset = qa_dataset.map(
-            process.answer_extract, fn_kwargs={"loop": loop}
         )
         qa_dataset = qa_dataset.map(
+            process.answer_extract, fn_kwargs={"loop": loop}
+        ).map(
             process.answer_prompt, fn_kwargs={"loop": loop}
         )
         qa_dataset = qa_dataset.add_column(
             name=f"q{loop + 1}_output",
             column=generator(qa_dataset[f"a{loop}_prompt"]),
-        )  # type: ignore
+        )
         qa_dataset = qa_dataset.map(
             process.question_extract, fn_kwargs={"loop": loop}
         )

@@ -8,9 +8,10 @@ import evaluate
 import jieba
 from rouge_chinese import Rouge
 from sentence_transformers import SentenceTransformer
+from typing import List, Dict
+import torch
 
-
-def bert_score(predictions: list[str], references: list[str]) -> dict:
+def bert_score(predictions: List[str], references: List[str]) -> Dict[str, float]:
     """
     Calculates the BERT score between the given predictions and references.
 
@@ -23,19 +24,19 @@ def bert_score(predictions: list[str], references: list[str]) -> dict:
         float: The BERT score between the predictions and references.
     """
     # Define the model
-    model = SentenceTransformer("all-MiniLM-L6-v2", device="cuda")
+    model = SentenceTransformer("all-MiniLM-L6-v2", device="cuda" if torch.cuda.is_available() else "cpu")
     # Compute the embeddings using the multi-process pool
     predictions_embeddings = model.encode(
-        predictions, normalize_embeddings=False
+        predictions, normalize_embeddings=True, batch_size=32
     )
     references_embeddings = model.encode(
-        references, normalize_embeddings=False
+        references, normalize_embeddings=True, batch_size=32
     )
     # Compute cosine similarity using SentenceTransformer's built-in function
     score = {}
     for score_name in ["dot", "cosine", "euclidean", "manhattan"]:
         model.similarity_fn_name = score_name
-        score[model.similarity_fn_name] = float(
+        score[score_name] = float(
             model.similarity_pairwise(
                 predictions_embeddings, references_embeddings
             ).mean()
@@ -54,12 +55,10 @@ def detect_language(text: str) -> str:
         str: 'chinese' if the text is in Chinese, 'english' if the text is in
         English.
     """
-    if any("\u4e00" <= char <= "\u9fff" for char in text):
-        return "chinese"
-    return "english"
+    return "chinese" if any("\u4e00" <= char <= "\u9fff" for char in text) else "english"
 
 
-def rouge_and_bert(predictions: list[str], references: list[str]) -> dict:
+def rouge_and_bert(predictions: List[str], references: List[str]) -> Dict[str, float]:
     """
     Compute the Rouge and BERT scores for the given predictions and references.
 

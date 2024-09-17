@@ -16,11 +16,11 @@ from llm_evaluation.process import (
     apply_default_template,
     apply_default_zh_template,
     zh_answer_prompt,
-    zh_question_extractor,
+    zh_question_extract,
     default_question_prompt,
     default_answer_prompt,
-    default_question_extractor,
-    default_answer_extractor,
+    default_question_extract,
+    default_answer_extract,
 )
 
 
@@ -56,6 +56,64 @@ def create_generator(config):
     return generator
 
 
+def get_process(language):
+    if language == "zh":
+        return Process(
+            question_extract=zh_question_extract,
+            answer_extract=default_answer_extract,
+            question_prompt=default_question_prompt,
+            answer_prompt=zh_answer_prompt,
+        )
+    return Process(
+        question_extract=default_question_extract,
+        answer_extract=default_answer_extract,
+        question_prompt=default_question_prompt,
+        answer_prompt=default_answer_prompt,
+    )
+
+
+def evaluate_task(config, task, process):
+    model_name = config["model"]["model_name"]
+    language = config["language"]
+    print(f"{model_name}:{task}:{language}")
+    
+    original_questions, _ = load_qa(
+        language=language,
+        task=task,
+        count=config["data"]["doc_count"],
+        min_length=config["data"]["min_length"],
+        max_length=config["data"]["max_length"],
+        from_remote=True,
+    )
+    
+    output_path = os.path.join("result", f"{model_name}_{task}_{language}")
+    if os.path.exists(output_path) and not config["force_regenerate"]:
+        print(f"Loading dataset from {output_path}")
+        qa_dataset = datasets.load_from_disk(output_path)
+    else:
+        generator = create_generator(config=config)
+        qa_dataset = evaluate(
+            generator=generator,
+            original_questions=original_questions,
+            loop_count=config["loop_count"],
+            process=process,
+        )
+        qa_dataset.save_to_disk(output_path)
+    
+    qa_dataset.to_json(f"{output_path}.json", force_ascii=False)
+    
+    score = save_score(
+        qa_dataset,
+        metric_compute=rouge_and_bert,
+        loop_count=config["loop_count"],
+        model_name=model_name,
+        task=task,
+        language=language,
+        path=os.path.join("score", f"{model_name}_{task}_{language}_scores.csv")
+    )
+    print(score)
+
+
 def main():
     with open(
         os.path.join("src", "llm_evaluation", "config.yml"),
@@ -72,66 +130,9 @@ def main():
     else:
         os.environ["WANDB_MODE"] = "dryrun"
         wandb.init(mode="disabled")
-    loop_count = config["loop_count"]
-    model_name = config["model"]["model_name"]
-    language = config["language"]
-    if language == "zh":
-        process = Process(
-            question_extract=zh_question_extractor,
-            answer_extract=default_answer_extractor,
-            question_prompt=default_question_prompt,
-            answer_prompt=zh_answer_prompt,
-        )
-    else:
-        process = Process(
-            question_extract=default_question_extractor,
-            answer_extract=default_answer_extractor,
-            question_prompt=default_question_prompt,
-            answer_prompt=default_answer_prompt,
-        )
+    process = get_process(config["language"])
     for task in config["task_list"]:
-        print(f"{model_name}:{task}:{language}")
-        original_questions, _ = load_qa(
-            language=language,
-            task=task,
-            count=config["data"]["doc_count"],
-            min_length=config["data"]["min_length"],
-            max_length=config["data"]["max_length"],
-            from_remote=True,
-        )
-        # Check if qa_dataset already exists locally
-        output_path = os.path.join("result", f"{model_name}_{task}_{language}")
-        if (
-            os.path.exists(output_path)
-            and config["force_regenerate"] is False
-        ):
-            print(f"Loading dataset from {output_path}")
-            qa_dataset = datasets.load_from_disk(output_path)
-            qa_dataset.to_json(f"{output_path}.json", force_ascii=False)
-        else:
-            generator = create_generator(config=config)
-            qa_dataset = evaluate(
-                generator=generator,
-                original_questions=original_questions,
-                loop_count=loop_count,
-                process=process,
-            )
-            # Save the dataset to disk
-            qa_dataset.save_to_disk(output_path)
-            # Save the dataset to a JSON file
-            qa_dataset.to_json(f"{output_path}.json", force_ascii=False)
-        score = save_score(
-            qa_dataset,
-            metric_compute=rouge_and_bert,
-            loop_count=loop_count,
-            model_name=model_name,
-            task=task,
-            language=language,
-            path=os.path.join(
-                "score", f"{model_name}_{task}_{language}_scores.csv"
-            ),
-        )
-        print(score)
+        evaluate_task(config, task, process)
     wandb.finish()
 
 

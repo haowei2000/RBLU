@@ -1,202 +1,78 @@
 """the default process"""
 
-from typing import Callable
+from typing import Callable, Dict
 from dataclasses import dataclass
 
 
-def default_question_extractor(example, loop) -> str:
-    """
-    Extracts the default question from a given string.
-
-    Parameters:
-    q (str): The input string containing the question.
-
-    Returns:
-    str: The extracted default question.
-
-    """
+def extract_question(example: Dict, loop: int, split_text: str) -> Dict:
     answer = example[f"a{loop}"]
-    question = example[f"q{loop + 1}_output"]
-    question = question.replace(answer, "", 1)
-    split_text = question.split("The question is most likely")
-    if len(split_text) > 1:
-        question = split_text[-1].strip()
-    example[f"q{loop + 1}"] = question
+    question = example[f"q{loop + 1}_output"].replace(answer, "", 1)
+    split = question.split(split_text)
+    example[f"q{loop + 1}"] = split[-1].strip() if len(split) > 1 else question
     return example
 
 
-def zh_question_extractor(example, loop) -> str:
-    """
-    Extracts the default question from a given string.
+def default_question_extract(example: Dict, loop: int) -> Dict:
+    return extract_question(example, loop, "The question is most likely")
 
-    Parameters:
-    q (str): The input string containing the question.
 
-    Returns:
-    str: The extracted default question.
+def zh_question_extract(example: Dict, loop: int) -> Dict:
+    return extract_question(example, loop, "该回答最可能的问题是：")
 
-    """
-    answer = example[f"a{loop}"]
-    question = example[f"q{loop + 1}_output"]
-    question = question.replace(answer, "", 1)
-    split_text = question.split("该回答最可能的问题是：")
-    if len(split_text) > 1:
-        question = split_text[-1].strip()
-    example[f"q{loop + 1}"] = question
+
+def default_answer_extract(example: Dict, loop: int) -> Dict:
+    answer = example[f"a{loop}_output"].replace(example[f"q{loop}"], "", 1)
+    answer = answer.replace("Assistant:", "", 1).replace("assistant:", "", 1)
+    example[f"a{loop}"] = answer.split(":", 1)[-1].strip() if ":" in answer else answer
     return example
 
 
-def default_answer_extractor(example, loop):
-    """
-    Extracts and cleans the answer from the given example based on the loop
-    index.
-
-    This function retrieves the answer and question from the example dictionary
-    using the loop index. It then removes the question and any leading
-    "Assistant:" or "assistant:" prefixes from the answer. If there is a colon
-    (":") in the answer, it splits the answer at the first colon and trims any
-    leading/trailing whitespace. The cleaned answer is then stored back in the
-    example dictionary with the key `f"a{loop}"`.
-
-    Args:
-        example (dict): A dictionary containing the example data with keys
-        formatted as `f"a{loop}_output"` and `f"q{loop}"`. loop (int): The loop
-        index used to access the specific question and answer in the example
-        dictionary.
-
-    Returns:
-        dict: The updated example dictionary with the cleaned answer stored
-        under the key `f"a{loop}"`.
-    """
-    answer = example[f"a{loop}_output"]
-    question = example[f"q{loop}"]
-    answer = answer.replace(question, "", 1)
-    answer = answer.replace("Assistant:", "", 1)
-    answer = answer.replace("assistant:", "", 1)
-    if ":" in answer:
-        answer = answer.split(":", 1)[1].strip()
-    example[f"a{loop}"] = answer
-    return example
-
-
-def default_question_prompt(example, loop):
-    """
-    Updates the given example dictionary by copying the value of the key
-    'q{loop}' to a new key 'q{loop}_prompt'.
-
-    Args:
-        example (dict): The dictionary containing the example data. loop (int):
-        The loop index used to generate the key names.
-
-    Returns:
-        dict: The updated example dictionary with the new 'q{loop}_prompt' key.
-    """
+def default_question_prompt(example: Dict, loop: int) -> Dict:
     example[f"q{loop}_prompt"] = example[f"q{loop}"]
     return example
 
 
-def default_answer_prompt(example, loop):
-    """
-    Generates a prompt for a given example and loop index.
-
-    This function takes an example dictionary and a loop index, retrieves the
-    answer corresponding to the loop index, formats it into a specific prompt
-    template, and adds the formatted prompt back into the example dictionary
-    with a new key.
-
-    Args:
-        example (dict): A dictionary containing the example data. loop (int):
-        The loop index to retrieve the answer from the example.
-
-    Returns:
-        dict: The updated example dictionary with the new prompt added.
-    """
+def generate_answer_prompt(example: Dict, loop: int, prompt_text: str) -> Dict:
     answer = example[f"a{loop}"]
-    answer = (
+    example[f"a{loop}_prompt"] = f"{prompt_text}\n\n{answer}"
+    return example
+
+
+def default_answer_prompt(example: Dict, loop: int) -> Dict:
+    prompt_text = (
         "The following text comes from a response to a conversation,"
         "which most likely asks the following question?"
-        "(Please reply in this format:The question is most likely......)\n\n"
-        f"{answer}"
+        "(Please reply in this format:The question is most likely......)"
     )
-    example[f"a{loop}_prompt"] = answer
-    return example
+    return generate_answer_prompt(example, loop, prompt_text)
 
 
-def zh_answer_prompt(example, loop):
-    """
-    Generates a prompt for a given example and loop index.
-
-    This function takes an example dictionary and a loop index, retrieves the
-    answer corresponding to the loop index, formats it into a specific prompt
-    template, and adds the formatted prompt back into the example dictionary
-    with a new key.
-
-    Args:
-        example (dict): A dictionary containing the example data. loop (int):
-        The loop index to retrieve the answer from the example.
-
-    Returns:
-        dict: The updated example dictionary with the new prompt added.
-    """
-    answer = example[f"a{loop}"]
-    answer = (
+def zh_answer_prompt(example: Dict, loop: int) -> Dict:
+    prompt_text = (
         "下面的内容来自一段对话的回答，"
         "该回答最可能的问题是什么？"
-        "(请用下面的格式回答:该回答最可能的问题是......)\n\n"
-        f"{answer}"
+        "(请用下面的格式回答:该回答最可能的问题是......)"
     )
-    example[f"a{loop}_prompt"] = answer
-    return example
+    return generate_answer_prompt(example, loop, prompt_text)
+
+
+def apply_template(user_input: str, system_content: str) -> list:
+    return [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": user_input},
+    ]
 
 
 def apply_default_template(user_input: str) -> list:
-    """
-    Generates a default message template for a Q&A bot.
-
-    Args:
-        user_input (str): The user's input message.
-
-    Returns:
-        list: A list of dictionaries representing the message template,
-            where the first dictionary sets the role to "system" with a
-            content indicating the bot's role, and the second dictionary
-            contains the user's input.
-    """
-    message = [
-        {
-            "role": "system",
-            "content": "You're a Q&A bot.",
-        },
-        {"role": "user", "content": user_input},
-    ]
-    return message
+    return apply_template(user_input, "You're a Q&A bot.")
 
 
-def apply_default_zh_template(uses_input: str) -> list:
-    message = [
-        {"role": "system", "content": "你是一个聊天问答机器人"},
-        {"role": "user", "content": uses_input},
-    ]
-    return message
+def apply_default_zh_template(user_input: str) -> list:
+    return apply_template(user_input, "你是一个聊天问答机器人")
 
 
 def apply_gemma_template(user_input: str) -> list:
-    """
-    Generates a gemma message template.
-
-    Args:
-        user_input (str): The user's input message.
-
-    Returns:
-        list: A list of dictionaries representing the message template,
-            where the first dictionary sets the role to "system" with a
-            content indicating the bot's role, and the second dictionary
-            contains the user's input.
-    """
-    message = [
-        {"role": "user", "content": user_input},
-    ]
-    return message
+    return [{"role": "user", "content": user_input}]
 
 
 @dataclass
@@ -206,7 +82,7 @@ class Process:
     if not specified, we will create a default "Process"
     """
 
-    question_extract: Callable = default_question_extractor
-    answer_extract: Callable = default_answer_extractor
+    question_extract: Callable = default_question_extract
+    answer_extract: Callable = default_answer_extract
     question_prompt: Callable = default_question_prompt
     answer_prompt: Callable = default_answer_prompt

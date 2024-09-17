@@ -74,6 +74,34 @@ def rename_all_columns(
     return dataset
 
 
+def load_dataset_from_remote(language: str, task: str) -> Dataset:
+    """Load remote dataset"""
+    if language == "zh":
+        if task in ["medical", "financial", "legal"]:
+            dataset = load_dataset("wanghw/human-ai-comparison", verification_mode="no_checks", split="train")
+            dataset = dataset.map(lambda x: {"answer": x["answer"].strip("[]")})
+            dataset = dataset.filter(lambda x: x["field"] == task and x["label"] == "human" and x["question"] is not None)
+        elif task == "code":
+            dataset = load_dataset("jean1/45k_python_code_chinese_instruction", split="train")
+        else:
+            raise ValueError("Invalid task for Chinese language")
+    elif language == "en":
+        dataset_name_dict = {
+            "medical": {"path": "Malikeh1375/medical-question-answering-datasets", "name": "all-processed", "split": "train"},
+            "financial": {"path": "winddude/reddit_finance_43_250k", "split": "train"},
+            "legal": {"path": "ibunescu/qa_legal_dataset_val", "split": "validation"},
+            "code": {"path": "jtatman/python-code-dataset-500k", "split": "train"},
+        }
+        if task in dataset_name_dict:
+            dataset = load_dataset(**dataset_name_dict[task])
+        else:
+            raise ValueError("Invalid task for English language")
+    else:
+        raise ValueError("Invalid language")
+    
+    return dataset
+
+
 def load_qa(
     language: str,
     task: str,
@@ -83,130 +111,57 @@ def load_qa(
     from_remote: bool = True,
     ignore_columns: Any | List[str] = None,
 ) -> tuple[list[str], list[str]]:
-    """
-    Load data based on the specified field.
-
-    Args:
-        language (str): The language of the dataset. Can be "zh" or "en".
-    task (str): The task to load data for. Can be "code", "financial", "legal",
-    or "medical". min_length (int, optional): The minimum length of the
-    question. Defaults to 10. max_length (int, optional): The maximum length of
-    the question. Defaults to 100. count (int, optional): The number of records
-    to load. Defaults to None. from_remote (bool, optional): If True, load the
-    dataset from a remote source. Defaults to True.
-
-    Returns:
-        tuple[list[str], list[str]]: A tuple containing two lists - questions
-        and answers.
-
-    Raises:
-        ValueError: If an invalid language is specified.
-    """
-    filename = (
-        Path.cwd().resolve().joinpath(Path(f"data/{language}_{task}.json"))
-    )
+    """Load question-answer pairs from dataset"""
+    filename = Path.cwd().resolve().joinpath(Path(f"data/{language}_{task}.json"))
+    
     if from_remote:
-        if language == "zh":
-            if task in [
-                "medical",
-                "financial",
-                "legal",
-            ]:
-                dataset = load_dataset(
-                    "wanghw/human-ai-comparison",
-                    verification_mode="no_checks",
-                    split="train",
-                )
-                dataset = dataset.map(
-                    lambda x: {"answer": x["answer"].strip("[]")}
-                )
-                dataset = dataset.filter(
-                    lambda x: x["field"] == task
-                    and x["label"] == "human"
-                    and x["question"] is not None
-                )
-            elif task == "code":
-                dataset = load_dataset(
-                    "jean1/45k_python_code_chinese_instruction",
-                    split="train",
-                )
-            else:
-                raise ValueError("Invalid task")
-        elif language == "en":
-            dataset_name_dict = {
-                "medical": {
-                    "path": "Malikeh1375/medical-question-answering-datasets",
-                    "name": "all-processed",
-                    "split": "train",
-                },
-                "financial": {
-                    "path": "winddude/reddit_finance_43_250k",
-                    "split": "train",
-                },
-                "legal": {
-                    "path": "ibunescu/qa_legal_dataset_val",
-                    "split": "validation",
-                },
-                "code": {
-                    "path": "jtatman/python-code-dataset-500k",
-                    "split": "train",
-                },
-            }
-            if from_remote:
-                if task in dataset_name_dict.keys():
-                    dataset = load_dataset(
-                        **dataset_name_dict[task],
-                    )
-                else:
-                    raise ValueError("Invalid task")
-        else:
-            raise ValueError("Invalid language")
-        dataset = rename_all_columns(
-            dataset,
-            [
-                "output",
-                "answer",
-                "response",
-                "body",
-            ],
+        dataset = load_dataset_from_remote(language, task)
+    else:
+        dataset = load_dataset("json", data_files=str(filename), split="train")
+    
+    dataset = rename_all_columns(
+        dataset,
+        [
+            "output",
             "answer",
-            ignore_columns=ignore_columns,
-        )
-        dataset = rename_all_columns(
-            dataset,
-            [
-                "input",
-                "question",
-                "body",
-                "selftext",
-                "instruction",
-            ],
+            "response",
+            "body",
+        ],
+        "answer",
+        ignore_columns=ignore_columns,
+    )
+    dataset = rename_all_columns(
+        dataset,
+        [
+            "input",
             "question",
-            ignore_columns=ignore_columns,
-        )
-        dataset = dataset.filter(
-            lambda x: min_length <= len(x["question"]) <= max_length
-        )
-        dataset = dataset.remove_columns([
-            col
-            for col in dataset.column_names
-            if col not in ["question", "answer"]
-        ])
-    else:
-        dataset = load_dataset(
-            "json",
-            data_files=str(filename),
-            split="train",
-        )
-    if count is not None and len(dataset) > count:
-        dataset = dataset.select(range(count))
-        dataset.to_json(
-            filename,
-            force_ascii=False,
-            lines=True,
-        )
-    else:
-        raise ValueError("Not enough data")
+            "body",
+            "selftext",
+            "instruction",
+        ],
+        "question",
+        ignore_columns=ignore_columns,
+    )
+    
+    dataset = dataset.filter(
+        lambda x: min_length <= len(x["question"]) <= max_length
+    )
+    dataset = dataset.remove_columns([
+        col
+        for col in dataset.column_names
+        if col not in ["question", "answer"]
+    ])
+    
+    if count is not None:
+        if len(dataset) > count:
+            dataset = dataset.select(range(count))
+            dataset.to_json(
+                filename,
+                force_ascii=False,
+                lines=True,
+            )
+        else:
+            raise ValueError(f"Not enough data. Required: {count}, Available: {len(dataset)}")
     return dataset["question"], dataset["answer"]
 
 
@@ -246,12 +201,9 @@ if __name__ == "__main__":
         "legal",
     ]:
         for language in ["en"]:
-            print(f"Language: {language}")
-            result = load_qa(
-                language,
-                task,
-                10,
-                1000,
-                2000,
-                True,
-            )
+            print(f"Processing task: {task}, Language: {language}")
+            try:
+                questions, answers = load_qa(language, task, 10, 1000, 2000, True)
+                print(f"Loaded {len(questions)} question-answer pairs")
+            except ValueError as e:
+                print(f"Error: {str(e)}")
