@@ -1,4 +1,4 @@
-wandb: False # use wandb to log the results
+wandb: True # use wandb to log the results
 force_regenerate: True # forced to regenerate the data even if the result file exists
 language: zh
 task_list:

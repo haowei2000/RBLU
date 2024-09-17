@@ -23,7 +23,9 @@ def zh_question_extract(example: Dict, loop: int) -> Dict:
 def default_answer_extract(example: Dict, loop: int) -> Dict:
     answer = example[f"a{loop}_output"].replace(example[f"q{loop}"], "", 1)
     answer = answer.replace("Assistant:", "", 1).replace("assistant:", "", 1)
-    example[f"a{loop}"] = answer.split(":", 1)[-1].strip() if ":" in answer else answer
+    example[f"a{loop}"] = (
+        answer.split(":", 1)[-1].strip() if ":" in answer else answer
+    )
     return example
 
 
@@ -86,3 +88,19 @@ class Process:
     answer_extract: Callable = default_answer_extract
     question_prompt: Callable = default_question_prompt
     answer_prompt: Callable = default_answer_prompt
+
+
+def get_process(language):
+    if language == "zh":
+        return Process(
+            question_extract=zh_question_extract,
+            answer_extract=default_answer_extract,
+            question_prompt=default_question_prompt,
+            answer_prompt=zh_answer_prompt,
+        )
+    return Process(
+        question_extract=default_question_extract,
+        answer_extract=default_answer_extract,
+        question_prompt=default_question_prompt,
+        answer_prompt=default_answer_prompt,
+    )

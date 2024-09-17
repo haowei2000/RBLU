@@ -15,12 +15,7 @@ from llm_evaluation.process import (
     Process,
     apply_default_template,
     apply_default_zh_template,
-    zh_answer_prompt,
-    zh_question_extract,
-    default_question_prompt,
-    default_answer_prompt,
-    default_question_extract,
-    default_answer_extract,
+    get_process
 )
 
 
@@ -56,27 +51,11 @@ def create_generator(config):
     return generator
 
 
-def get_process(language):
-    if language == "zh":
-        return Process(
-            question_extract=zh_question_extract,
-            answer_extract=default_answer_extract,
-            question_prompt=default_question_prompt,
-            answer_prompt=zh_answer_prompt,
-        )
-    return Process(
-        question_extract=default_question_extract,
-        answer_extract=default_answer_extract,
-        question_prompt=default_question_prompt,
-        answer_prompt=default_answer_prompt,
-    )
-
-
 def evaluate_task(config, task, process):
     model_name = config["model"]["model_name"]
     language = config["language"]
     print(f"{model_name}:{task}:{language}")
-    
+
     original_questions, _ = load_qa(
         language=language,
         task=task,
@@ -85,7 +64,7 @@ def evaluate_task(config, task, process):
         max_length=config["data"]["max_length"],
         from_remote=True,
     )
-    
+
     output_path = os.path.join("result", f"{model_name}_{task}_{language}")
     if os.path.exists(output_path) and not config["force_regenerate"]:
         print(f"Loading dataset from {output_path}")
@@ -99,9 +78,9 @@ def evaluate_task(config, task, process):
             process=process,
         )
         qa_dataset.save_to_disk(output_path)
-    
+
     qa_dataset.to_json(f"{output_path}.json", force_ascii=False)
-    
+
     score = save_score(
         qa_dataset,
         metric_compute=rouge_and_bert,
@@ -109,7 +88,9 @@ def evaluate_task(config, task, process):
         model_name=model_name,
         task=task,
         language=language,
-        path=os.path.join("score", f"{model_name}_{task}_{language}_scores.csv")
+        path=os.path.join(
+            "score", f"{model_name}_{task}_{language}_scores.csv"
+        ),
     )
     print(score)
 
