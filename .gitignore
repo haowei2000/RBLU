@@ -22,3 +22,8 @@ src/llm_evaluation/__pycache__/
 src/llm_evaluation/__pycache__
 .venv
 .venv/
+zsh
+.vscode
+.mypy_cache
+.idea
+dist

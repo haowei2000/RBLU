@@ -8,7 +8,7 @@ task_list:
   # - code
 batch_size: 8
 model:
-  model_name: glm
+  model_name: qwen
   model_path:
     llama: /public/model/hub/llm-research/meta-llama-3-8b-instruct
     # gemma: /public/model/hub/AI-ModelScope/gemma-2-9b-it

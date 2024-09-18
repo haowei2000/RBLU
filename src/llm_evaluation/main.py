@@ -7,7 +7,7 @@ import torch
 import wandb
 import yaml
 from transformers import AutoModelForCausalLM, AutoTokenizer
-
+from accelerate.utils import write_basic_config
 from llm_evaluation.data_load import load_qa
 from llm_evaluation.evaluation import MyGenerator, evaluate, save_score
 from llm_evaluation.metric import rouge_and_bert
@@ -15,7 +15,7 @@ from llm_evaluation.process import (
     Process,
     apply_default_template,
     apply_default_zh_template,
-    get_process
+    get_process,
 )
 
 
@@ -96,6 +96,7 @@ def evaluate_task(config, task, process):
 
 
 def main():
+    write_basic_config(mixed_precision="fp16")
     with open(
         os.path.join("src", "llm_evaluation", "config.yml"),
         "r",
