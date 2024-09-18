@@ -21,5 +21,6 @@
         "--line-length=79"
     ],
     "rewrap.autoWrap.enabled": true,
-    "mypy-type-checker.importStrategy": "fromEnvironment"
+    "mypy-type-checker.importStrategy": "fromEnvironment",
+    "terminal.integrated.fontFamily": "JetBrainsMono-Regular"
 }
