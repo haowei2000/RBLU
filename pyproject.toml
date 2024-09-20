@@ -19,6 +19,10 @@ sentence-transformers = "^3.1.0"
 jieba = "^0.42.1"
 wandb = "^0.18.0"
 tiktoken = "^0.7.0"
+pyecharts = "^2.0.6"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
 
 [build-system]
 build-backend = "poetry.core.masonry.api"

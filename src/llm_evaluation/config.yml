@@ -1,16 +1,17 @@
-wandb: True # use wandb to log the results
-force_regenerate: True # forced to regenerate the data even if the result file exists
-language: zh
+wandb: False # use wandb to log the results
+force_regenerate: True
+ # forced to regenerate the data even if the result file exists
+language: en
 task_list:
-  - medical
-  - legal
+  # - medical
+  # - legal
   - financial
   # - code
 batch_size: 8
 model:
-  model_name: qwen
+  model_name: llama
   model_path:
-    llama: /public/model/hub/llm-research/meta-llama-3-8b-instruct
+    llama: /public/model/hub/LLM-Research/Meta-Llama-3-1-8B-Instruct/
     # gemma: /public/model/hub/AI-ModelScope/gemma-2-9b-it
     glm: /public/model/hub/ZhipuAI/glm-4-9b-chat
     qwen: /public/model/hub/qwen/qwen2-7b-instruct

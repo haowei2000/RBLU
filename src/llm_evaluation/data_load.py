@@ -103,8 +103,8 @@ def load_dataset_from_remote(language: str, task: str) -> Dataset:
 
 
 def load_qa(
-    language: str,
-    task: str,
+    lang: str,
+    task_name: str,
     min_length: int = 10,
     max_length: int = 100,
     count: Any | int = None,
@@ -112,10 +112,10 @@ def load_qa(
     ignore_columns: Any | List[str] = None,
 ) -> tuple[list[str], list[str]]:
     """Load question-answer pairs from dataset"""
-    filename = Path.cwd().resolve().joinpath(Path(f"data/{language}_{task}.json"))
+    filename = Path.cwd().resolve().joinpath(Path(f"data/{lang}_{task_name}.json"))
     
     if from_remote:
-        dataset = load_dataset_from_remote(language, task)
+        dataset = load_dataset_from_remote(lang, task_name)
     else:
         dataset = load_dataset("json", data_files=str(filename), split="train")
     

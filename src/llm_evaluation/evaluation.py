@@ -38,6 +38,8 @@ class TokenizedDataset(Dataset):
     """
 
     def __init__(self, input_ids, attention_masks):
+        # dont add super init beacuse it will call the parent class init
+        # super().__init__()
         self.input_ids = input_ids
         self.attention_masks = attention_masks
 

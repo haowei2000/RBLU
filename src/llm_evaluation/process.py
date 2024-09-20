@@ -3,12 +3,12 @@
 from typing import Callable, Dict
 from dataclasses import dataclass
 
-
 def extract_question(example: Dict, loop: int, split_text: str) -> Dict:
     answer = example[f"a{loop}"]
     question = example[f"q{loop + 1}_output"].replace(answer, "", 1)
     split = question.split(split_text)
     example[f"q{loop + 1}"] = split[-1].strip() if len(split) > 1 else question
+    example[f"q{loop + 1}"] = example[f"q{loop + 1}"].strip("‘’”“：；\"\'")
     return example
 
 
@@ -17,7 +17,7 @@ def default_question_extract(example: Dict, loop: int) -> Dict:
 
 
 def zh_question_extract(example: Dict, loop: int) -> Dict:
-    return extract_question(example, loop, "该回答最可能的问题是：")
+    return extract_question(example, loop, "该回答最可能的问题是")
 
 
 def default_answer_extract(example: Dict, loop: int) -> Dict:
