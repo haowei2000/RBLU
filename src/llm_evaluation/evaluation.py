@@ -81,7 +81,7 @@ class MyGenerator:
             apply_template (Optional[Callable[[str], list[dict]]]):
                 A function to apply a template to the input data.
             gen_kwargs (dict):
-                 Additional keyword arguments for the generation.
+                Additional keyword arguments for the generation.
 
         Returns:
             None
@@ -146,7 +146,7 @@ class MyGenerator:
         """
         Tokenize a list of texts using the specified tokenizer.
         If a template is applied, it uses the `apply_chat_template`
-          method of the tokenizer with additional options.
+        method of the tokenizer with additional options.
         Otherwise, it uses the `batch_encode_plus` method.
 
         Args:
@@ -154,11 +154,11 @@ class MyGenerator:
 
         Returns:
             BatchEncoding: The tokenized representation of the input
-              texts.
+            texts.
 
         Raises:
             TypeError: If the returned type from `apply_chat_template`
-              is not `BatchEncoding`.
+            is not `BatchEncoding`.
         """
         if self.apply_template is not None:
             text_formatted_list = [
