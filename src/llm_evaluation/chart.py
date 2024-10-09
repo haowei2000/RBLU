@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import yaml
-from path import chart_dir, project_dir, score_dir
+from path import chart_dir, project_dir, score_dir,result_dir
 from pyecharts import options as opts
 from pyecharts.charts import Line
 from pyecharts.commons.utils import JsCode
@@ -56,34 +56,32 @@ def tsne(texts_list, rounds, output_path, vector=None, colors=None):
 
 
 def draw_tsne(config: dict):
-    model_name = config["model"]["model_name"]
-    language = config["language"]
-    for task in config["task_list"]:
-        for mode in ["q", "a"]:
-            data_path = (
-                project_dir / "result" / f"{model_name}_{task}_{language}"
-            )
-            qa_dataset = datasets.load_from_disk(data_path)
-            all_text, all_round = zip(
-                *[
-                    (
-                        qa_dataset.select_columns(f"{mode}{round}")[
-                            f"{mode}{round}"
-                        ],
-                        round,
+    for model_name in ['glm','llama','qwen']:
+        for language in config["language_list"]:
+            for task in config["task_list"]:
+                for mode in ["q", "a"]:
+                    data_path = result_dir / f"{model_name}_{task}_{language}"
+                    qa_dataset = datasets.load_from_disk(data_path)
+                    all_text, all_round = zip(
+                        *[
+                            (
+                                qa_dataset.select_columns(f"{mode}{round}")[
+                                    f"{mode}{round}"
+                                ],
+                                round,
+                            )
+                            for round in range(5)
+                        ]
                     )
-                    for round in range(5)
-                ]
-            )
-            output_dir = chart_dir / "tsne"
-            os.makedirs(output_dir, exist_ok=True)
-            tsne(
-                texts_list=all_text,
-                rounds=all_round,
-                output_path=output_dir
-                / f"tsne_{model_name}_{task}_{language}.png",
-                colors=config["color_family"],
-            )
+                    output_dir = chart_dir / "tsne"
+                    os.makedirs(output_dir, exist_ok=True)
+                    tsne(
+                        texts_list=all_text,
+                        rounds=all_round,
+                        output_path=output_dir
+                        / f"tsne_{model_name}_{task}_{language}.png",
+                        colors=config["color_family"],
+                    )
 
 
 def line(
@@ -108,13 +106,13 @@ def line(
     """
     plt.figure(figsize=(10, 6))
     for i, (series, label) in enumerate(zip(data, labels)):
-        linestyle = '-' if refer == 'n-1' else '-'
+        # linestyle = '-' if refer == 'n-1' else '-'
         plt.plot(
             range(len(series)),
             series,
             label=label,
             color=colors[i] if colors else None,
-            linestyle=linestyle,
+            # linestyle=linestyle,
         )
 
     plt.title(title)
@@ -156,37 +154,37 @@ def _combine_score(
 def draw_line(
     config,
     metric_name="rouge1",
-    mode="q",
-    refer="0",
     output_dir: str | Path = None,
 ):
-    model_list = ["llama", "glm", "qwen"]
-    scores = _combine_score(
-        model_list,
-        config["language"],
-        config["task"],
-        metric_name,
-        mode,
-        refer,
-    )
-    # Print the scores rounded to three decimal places
-    scores = [
-        [round(score, 3) for score in model_scores] for model_scores in scores
-    ]
-    if output_dir is None:
-        output_dir = chart_dir / "line"
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = (
-        output_dir
-        / f"line_{metric_name}_{config["task"]}_{config["language"]}_{refer}.png"
-    )  # noqa: F821
-    line(
-        scores,
-        model_list,
-        y_axis_name=metric_name,
-        colors=config["color_family"],
-        output_path=output_path,
-    )
+    for mode in ["q", "a"]:
+        for refer in ["0", "n-1"]:
+            model_list = config["model_list"]
+            scores = _combine_score(
+                model_list,
+                config["language"],
+                config["task"],
+                metric_name,
+                mode,
+                refer,
+            )
+            # Print the scores rounded to three decimal places
+            scores = [
+                [round(score, 3) for score in model_scores] for model_scores in scores
+            ]
+            if output_dir is None:
+                output_dir = chart_dir / "line"
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = (
+                output_dir
+                / f"line_{metric_name}_{config["task"]}_{config["language"]}_{refer}.png"
+            )  # noqa: F821
+            line(
+                scores,
+                model_list,
+                y_axis_name=metric_name,
+                colors=config["color_family"],
+                output_path=output_path,
+            )
 
 
 if __name__ == "__main__":
@@ -200,8 +198,7 @@ if __name__ == "__main__":
         config = yaml.safe_load(config_file)  # noqa: F821
     draw_tsne(config=config)
     # for metric_name in ["cosine", "rouge1", "rougeLsum"]:
-    #     for mode in ["q", "a"]:
-    #         for refer in ["0", "n-1"]:
+
     #             draw_line(
     #                 config=config,
     #                 metric_name=metric_name,
