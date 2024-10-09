@@ -1,20 +1,27 @@
-wandb: True # use wandb to log the results
-force_regenerate: True
- # forced to regenerate the data even if the result file exists
+wandb: False # use wandb to log the results
+force_regenerate: False
+# forced to regenerate the data even if the result file exists
+
 language: zh
+language_list:
+- zh
+- en
+task: legal
 task_list:
-  # - medical
-  # - legal
-  - financial
-  # - code
-batch_size: 8
+- medical
+- legal
+- financial
+# - code
+
 model:
-  model_name: glm
+  model_name: llama
   model_path:
     llama: /public/model/hub/LLM-Research/Meta-Llama-3-1-8B-Instruct/
     # gemma: /public/model/hub/AI-ModelScope/gemma-2-9b-it
     glm: /public/model/hub/ZhipuAI/glm-4-9b-chat
     qwen: /public/model/hub/qwen/qwen2-7b-instruct
+
+batch_size: 8
 
 # The following is the default config for the data generation
 # Please dont change the config in the data generation script unless you know what you are doing
@@ -30,3 +37,12 @@ tokenizer_kwargs:
   add_special_tokens: True
 gen_kwargs:
   max_new_tokens: 1000
+
+# chart config
+color_family:
+- '#2A557F'
+- '#FFCD6E'
+- '#F05076'
+- '#45779C'
+- '#606060'
+- '#E465B0'

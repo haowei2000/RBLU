@@ -119,7 +119,7 @@ class MyGenerator:
         6. Measures and prints the time taken for the batch generation.
         """
         start_time = time.time()
-        batch_encoding = self.tokenize_texts(text_list)
+        batch_encoding = self._tokenize_texts(text_list)
         dataset = TokenizedDataset(
             batch_encoding["input_ids"],
             batch_encoding["attention_mask"],
@@ -142,7 +142,7 @@ class MyGenerator:
         print(f"Time taken for batch gen: {time.time() - start_time:.2f} seconds")
         return responses
 
-    def tokenize_texts(self, text_list: Any | list[str]) -> BatchEncoding:
+    def _tokenize_texts(self, text_list: Any | list[str]) -> BatchEncoding:
         """
         Tokenize a list of texts using the specified tokenizer.
         If a template is applied, it uses the `apply_chat_template`

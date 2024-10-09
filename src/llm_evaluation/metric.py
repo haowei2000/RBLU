@@ -11,7 +11,7 @@ from sentence_transformers import SentenceTransformer
 from typing import List, Dict
 import torch
 import pandas as pd
-from llm_evaluation.chart import draw_line_chart
+from llm_evaluation.chart import line
 
 
 def bert_score(
@@ -64,7 +64,7 @@ def detect_language(text: str) -> str:
         English.
     """
     return (
-        "chinese"
+        "zh"
         if any("\u4e00" <= char <= "\u9fff" for char in text)
         else "english"
     )
@@ -79,7 +79,7 @@ def rouge_and_bert(
     Parameters: - predictions (list): A list of predicted texts.  - references
     (list): A list of reference texts.
 
-    Returns: - score (dict): A dictionary containing the computed Rouge and BERT
+    Returns: - score (dict): A dict containing the computed Rouge and BERT
     scores.
     """
     # Detect if the input is in Chinese or English
@@ -87,58 +87,15 @@ def rouge_and_bert(
     # Check the language of the first prediction
     language = detect_language(predictions[0])
     # Replace empty strings in predictions with 'nan'
-    if language == "chinese":
+    if language == "zh":
         predictions = [" ".join(jieba.cut(pred)) for pred in predictions]
         references = [" ".join(jieba.cut(ref)) for ref in references]
-        score = Rouge().get_scores(predictions, references, avg=True)
-    else:
-        rouge = evaluate.load("rouge")
-        score = rouge.compute(predictions=predictions, references=references)
+        # score = Rouge().get_scores(predictions, references, avg=True)
+    rouge = evaluate.load("rouge")
+    score = rouge.compute(predictions=predictions, references=references)
     if not isinstance(score, dict):
         raise ValueError(
             "The returned score from rouge.compute is not a dictionary"
         )
     score.update(bert_score(predictions=predictions, references=references))
     return score
-
-
-def draw(
-    model_list: list[str],
-    language: str,
-    task: str,
-    metric_name,
-    mode: str,
-    refer: str,
-):
-    """
-    Purpose:
-    """
-    result = []
-    for model_name in model_list:
-        scores = pd.read_csv(
-            f"score/{model_name}_{task}_{language}_scores.csv"
-        )
-        filtered_scores = scores[
-            (scores["refer"] == refer) & (scores["mode"] == mode)
-        ]
-        metric_scores = filtered_scores[metric_name]
-        result.append(metric_scores.tolist())
-    return result
-    # Print the combined dataframe
-
-
-# end def
-
-if __name__ == "__main__":
-    model_list = ["llama", "glm", "qwen"]
-    language = "en"
-    task = "medical"
-    metric_name = "rouge1"
-    mode = "q"
-    refer = "0"
-    scores = draw(model_list, language, task, metric_name, mode, refer)
-    # Print the scores rounded to three decimal places
-    scores = [
-        [round(score, 3) for score in model_scores] for model_scores in scores
-    ]
-    draw_line_chart(scores, model_list).render("line_chart.html")

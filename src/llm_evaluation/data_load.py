@@ -191,7 +191,7 @@ def load_qa(
             )
         else:
             raise ValueError(
-                f"Not enough data. Required: {count}, Available: {len(dataset)}"
+                f"Not enough data.Required: {count}, Available: {len(dataset)}"
             )
     return dataset["question"], dataset["answer"]
 
