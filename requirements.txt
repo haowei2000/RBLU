@@ -1,9 +1,0 @@
-evaluate==0.4.2
-matplotlib==3.9.2
-pandas==2.2.2
-pyecharts==2.0.6
-pymongo==4.8.0
-sentence_transformers==3.0.1
-torch==2.4.1
-tqdm==4.66.5
-transformers==4.44.0
