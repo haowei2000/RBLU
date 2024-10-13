@@ -13,6 +13,10 @@ task_list:
 - financial
 # - code
 
+model_list:
+- llama
+- glm
+- qwen
 model:
   model_name: llama
   model_path:
