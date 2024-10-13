@@ -6,8 +6,12 @@ folder path is ./data
 from pathlib import Path
 from typing import Any, List
 
+import pandas as pd
+from path import chart_dir
 import matplotlib.pyplot as plt
+import seaborn as sns
 from datasets import Dataset, load_dataset
+import yaml
 
 
 def rename_all_columns(
@@ -182,7 +186,7 @@ def load_qa(
     )
 
     if count is not None:
-        if len(dataset) > count:
+        if len(dataset) >= count:
             dataset = dataset.select(range(count))
             dataset.to_json(
                 filename,
@@ -198,6 +202,7 @@ def load_qa(
 
 def plot_string_length_distribution(
     data: list[str],
+    output_path: str | Path = None,
 ) -> None:
     """
     Plots the distribution of string lengths in a given list of strings.
@@ -221,22 +226,76 @@ def plot_string_length_distribution(
     plt.title("String Length Distribution")
     plt.xlabel("Length of String")
     plt.ylabel("Frequency")
-    plt.show()
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(output_path)
 
 
 if __name__ == "__main__":
-    for task in [
-        # "code",
-        "medical",
-        "financial",
-        "legal",
-    ]:
-        for language in ["en"]:
-            print(f"Processing task: {task}, Language: {language}")
-            try:
-                questions, answers = load_qa(
-                    language, task, 10, 1000, 2000, True
-                )
-                print(f"Loaded {len(questions)} question-answer pairs")
-            except ValueError as e:
-                print(f"Error: {str(e)}")
+    # Load question-answer pairs from dataset
+    with open(
+        "config.yml",
+        "r",
+        encoding="utf-8",
+    ) as config_file:
+        config = yaml.safe_load(config_file)
+
+    for lang in ["en", "zh"]:
+        all_questions = {}
+        for task in ["medical", "financial", "legal"]:
+            original_questions, _ = load_qa(
+                lang=lang,
+                task_name=task,
+                count=config["data"]["doc_count"],
+                min_length=config["data"]["min_length"],
+                max_length=config["data"]["max_length"],
+                from_remote=False,
+            )
+            all_questions[task] = original_questions
+
+        # Plot the distribution of string lengths for each task using box plots
+        melted_data = pd.DataFrame(
+            {
+                "Category": [
+                    task for task in all_questions for _ in all_questions[task]
+                ],
+                "Text Length": [
+                    len(text)
+                    for task in all_questions
+                    for text in all_questions[task]
+                ],
+            }
+        )
+
+        # Remove outliers
+        Q1 = melted_data["Text Length"].quantile(0.25)
+        Q3 = melted_data["Text Length"].quantile(0.75)
+        IQR = Q3 - Q1
+        filtered_data = melted_data[
+            ~(
+                (melted_data["Text Length"] < (Q1 - 1.5 * IQR))
+                | (melted_data["Text Length"] > (Q3 + 1.5 * IQR))
+            )
+        ]
+
+        # 设置图像
+        plt.figure(figsize=(8, 6))
+
+        # 设置风格
+        sns.set(style="whitegrid")
+
+        # 绘制箱线图
+        sns.boxplot(x="Category", y="Text Length", data=filtered_data)
+
+        # 设置图表的标题
+        plt.title("Text Length Distribution (Box Plot)")
+
+        # 显示图像
+        output_path = (
+            chart_dir
+            / "string_length_distribution"
+            / f"length_{lang}_combined.png"
+        )
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(output_path)
+        plt.close()
