@@ -1,38 +1,14 @@
-import matplotlib.pyplot as plt
-import numpy as np
+import yaml
+from main import create_generator
 
-# 生成数据
-x = np.linspace(0, 10, 100)
-y1 = np.sin(x)        # 第一组数据
-y2 = np.cos(x)        # 第二组数据
-y3 = np.sin(x) + 0.5  # 第三组数据
-y4 = np.cos(x) - 0.5  # 第四组数据
-
-# 创建图形
-plt.figure(figsize=(10, 6))
-
-# 绘制第一组（蓝色实线）
-plt.plot(x, y1, label='sin(x)', color='blue', linestyle='-')
-
-# 绘制第二组（黄色实线）
-plt.plot(x, y2, label='cos(x)', color='yellow', linestyle='-')
-
-# 绘制第三组（蓝色虚线）
-plt.plot(x, y3, label='sin(x) + 0.5', color='blue', linestyle='--')
-
-# 绘制第四组（黄色虚线）
-plt.plot(x, y4, label='cos(x) - 0.5', color='yellow', linestyle='--')
-
-# 添加标题和标签
-plt.title('Multiple Data Sets with Different Line Styles')
-plt.xlabel('x')
-plt.ylabel('y')
-
-# 添加图例
-plt.legend()
-
-# 显示网格
-plt.grid()
-
-# 显示图形
-plt.savefig('test.png')
+with open(
+    "config.yml",
+    "r",
+    encoding="utf-8",
+) as config_file:
+    config = yaml.safe_load(config_file)
+generator = create_generator(config=config)
+result = generator(
+    ["下面是一篇论文的摘要，请提炼其中的研究方法，每个方法用一个词语概况，用1、 2、 3、的格式回答：[目的/意义]探索基于可解释性理论的数据故事化解释效果评价方法对于拓展可解释性方法、推动故事化应用具有重要意义。[方法/过程]在述评可解释性理论、数据故事化的解释作用及解释效果评价等内容的基础上，构建了一个结合可解释性结果的数据故事化解释模型及公式化表达和评价指标体系。本研究通过实证分析，采用问卷调查法的半定量分析与基于指标参数的定量分析方法，对所提出的评价方案进行验证，明确了数据故事化在增强结果可解释性中的作用。[结果/结论]将可解释性结果以数据故事的形式呈现，能显著提高用户的理解效果和接受度。本研究不仅丰富了可解释性理论和数据故事化领域的研究，也为实践中评价模型解释效果提供了有价值的指导方案。[创新/局限]数据故事化的解释效果评价为衡量可解释性、可理解性等指标提供了新的视角与方案，但对于评价模型的改进与优化策略有待深入研究。"]
+)
+print(result)

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import yaml
-from path import chart_dir, project_dir, score_dir, result_dir
+from path import chart_dir, project_dir, result_dir, score_dir
 from pyecharts import options as opts
 from pyecharts.charts import Line
 from pyecharts.commons.utils import JsCode
@@ -121,7 +121,7 @@ def line(
         plt.plot(
             range(1, 5),
             series,
-            label=f'{label} n',
+            label=f'{label} n-1',
             color=colors[i] if colors else None,
             linestyle = '--',
             # linestyle=linestyle,
@@ -207,6 +207,8 @@ def draw_line(
 
 if __name__ == "__main__":
     # Create a Path object for the current directory
+    plt.rcParams["font.family"] = "Arial"
+    plt.rcParams["figure.dpi"] = 600  # Set resolution to 600ppi
     current_dir = Path(__file__).parent
     with open(
         file=current_dir / "config.yml",

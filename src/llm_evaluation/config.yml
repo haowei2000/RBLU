@@ -18,7 +18,7 @@ model_list:
 - glm
 - qwen
 model:
-  model_name: llama
+  model_name: glm
   model_path:
     llama: /public/model/hub/LLM-Research/Meta-Llama-3-1-8B-Instruct/
     # gemma: /public/model/hub/AI-ModelScope/gemma-2-9b-it
