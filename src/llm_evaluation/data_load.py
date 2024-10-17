@@ -6,12 +6,13 @@ folder path is ./data
 from pathlib import Path
 from typing import Any, List
 
-import pandas as pd
-from path import chart_dir
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
-from datasets import Dataset, load_dataset
 import yaml
+from datasets import Dataset, load_dataset
+from path import chart_dir, data_dir
 
 
 def rename_all_columns(
@@ -141,14 +142,14 @@ def load_qa(
     ignore_columns: Any | List[str] = None,
 ) -> tuple[list[str], list[str]]:
     """Load question-answer pairs from dataset"""
-    filename = (
-        Path.cwd().resolve().joinpath(Path(f"data/{lang}_{task_name}.json"))
-    )
+    filename = data_dir / f"{lang}_{task_name}.json"
 
     if from_remote:
         dataset = load_dataset_from_remote(lang, task_name)
     else:
-        dataset = load_dataset("json", data_files=str(filename), split="train")
+        dataset = load_dataset(
+            "json", data_files=str(filename), split="train"
+        )
 
     dataset = rename_all_columns(
         dataset,
@@ -200,46 +201,7 @@ def load_qa(
     return dataset["question"], dataset["answer"]
 
 
-def plot_string_length_distribution(
-    data: list[str],
-    output_path: str | Path = None,
-) -> None:
-    """
-    Plots the distribution of string lengths in a given list of strings.
-
-    Parameters:
-        data (list[str]): The list containing the strings.
-
-    Returns:
-        None
-    """
-    if not data:
-        print("No data to plot.")
-        return
-
-    lengths = [len(s) for s in data]
-    plt.hist(
-        lengths,
-        bins=range(min(lengths), max(lengths) + 1, 1),
-        edgecolor="black",
-    )
-    plt.title("String Length Distribution")
-    plt.xlabel("Length of String")
-    plt.ylabel("Frequency")
-    if output_path is not None:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(output_path)
-
-
-if __name__ == "__main__":
-    # Load question-answer pairs from dataset
-    with open(
-        "config.yml",
-        "r",
-        encoding="utf-8",
-    ) as config_file:
-        config = yaml.safe_load(config_file)
-
+def draw_length_distribution(config) -> None:
     for lang in ["en", "zh"]:
         all_questions = {}
         for task in ["medical", "financial", "legal"]:
@@ -281,11 +243,24 @@ if __name__ == "__main__":
         # 设置图像
         plt.figure(figsize=(8, 6))
 
-        # 设置风格
-        sns.set(style="whitegrid")
+        # 设置颜色
+        colors = config['color_family']
+        box = plt.boxplot(
+            [
+            filtered_data[filtered_data["Category"] == task]["Text Length"]
+            for task in all_questions
+            ],
+            patch_artist=True,
+            labels=all_questions.keys(),
+        )
 
-        # 绘制箱线图
-        sns.boxplot(x="Category", y="Text Length", data=filtered_data)
+        # 设置箱线图颜色
+        for patch, color in zip(box["boxes"], colors):
+            patch.set_facecolor(color)
+
+        # 设置中间的分割线用黑色
+        for median in box['medians']:
+            median.set(color='black')
 
         # 设置图表的标题
         plt.title("Text Length Distribution (Box Plot)")
@@ -294,8 +269,26 @@ if __name__ == "__main__":
         output_path = (
             chart_dir
             / "string_length_distribution"
-            / f"length_{lang}_combined.png"
+            / f"length_{lang}_combined.svg"
         )
         output_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output_path)
         plt.close()
+
+
+if __name__ == "__main__":
+    plt.rcParams["font.family"] = "Arial"
+    plt.rcParams["figure.dpi"] = 600  # Set resolution to 600ppi
+    plt.rcParams["figure.figsize"] = [
+        8.27 * 0.25,
+        11.69 * 0.75,
+    ]  # A4 size is 8.27 x 11.69 inches
+    plt.rcParams["font.size"] = 12  # Set font size to 12pt
+    current_dir = Path(__file__).parent
+    with open(
+        file=current_dir / "config.yml",
+        mode="r",
+        encoding="utf-8",
+    ) as config_file:
+        config = yaml.safe_load(config_file)  # noqa: F821
+    draw_length_distribution(config)

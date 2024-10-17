@@ -6,18 +6,22 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import yaml
+from data_load import load_qa
 from path import chart_dir, project_dir, result_dir, score_dir
-from pyecharts import options as opts
-from pyecharts.charts import Line
-from pyecharts.commons.utils import JsCode
 from sentence_transformers import SentenceTransformer
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.manifold import TSNE
 
 
-def tsne(texts_list, rounds, output_path, vector=None, colors=None):
+def tsne(
+    texts_list,
+    rounds,
+    output_path: Path,
+    vector=None,
+    colors=None,
+    n_components=3,
+):
     """
-    Draw a TSNE plot with multiple lists.
+    Draw a TSNE plot with multiple lists in 2D or 3D.
 
     :param texts_list: List of lists, where each inner list contains texts
         for a specific round.
@@ -25,6 +29,7 @@ def tsne(texts_list, rounds, output_path, vector=None, colors=None):
     :param output_path: Path to save the output plot.
     :param vector: Precomputed vector representations of texts (optional).
     :param colors: List of colors for each round (optional).
+    :param n_components: Number of dimensions for TSNE (2 or 3).
     """
     all_texts = []
     all_rounds = []
@@ -40,20 +45,89 @@ def tsne(texts_list, rounds, output_path, vector=None, colors=None):
         X = model.encode(all_texts, normalize_embeddings=True, batch_size=32)
 
     # t-SNE dimensionality reduction
-    tsne = TSNE(n_components=2, perplexity=30, max_iter=1000)
+    tsne = TSNE(n_components=n_components, perplexity=30, max_iter=1000)
     X_embedded = tsne.fit_transform(X)
 
     # Visualization
-    plt.figure(figsize=(10, 10))
-    scatter = plt.scatter(
-        X_embedded[:, 0], X_embedded[:, 1], c=all_rounds, cmap="viridis"
-    )
-    if colors:
-        for i, color in enumerate(colors):
-            plt.scatter([], [], c=color, label=f"Round {i}")
-    plt.legend()
+    fig = plt.figure(figsize=(10, 10))
+    if n_components == 3:
+        ax = fig.add_subplot(111, projection="3d")
+        if colors:
+            color_map = {round: color for round, color in zip(rounds, colors)}
+            scatter = ax.scatter(
+                X_embedded[:, 0],
+                X_embedded[:, 1],
+                X_embedded[:, 2],
+                c=[color_map[round] for round in all_rounds],
+            )
+        else:
+            scatter = ax.scatter(
+                X_embedded[:, 0],
+                X_embedded[:, 1],
+                X_embedded[:, 2],
+                c=all_rounds,
+                cmap="viridis",
+            )
+    elif n_components == 2:
+        ax = fig.add_subplot(111)
+        if colors:
+            color_map = {round: color for round, color in zip(rounds, colors)}
+            scatter = ax.scatter(
+                X_embedded[:, 0],
+                X_embedded[:, 1],
+                c=[color_map[round] for round in all_rounds],
+            )
+        else:
+            scatter = ax.scatter(
+                X_embedded[:, 0],
+                X_embedded[:, 1],
+                c=all_rounds,
+                cmap="viridis",
+            )
+    else:
+        raise ValueError("n_components must be either 2 or 3")
+
+    # Save the plot to a file
     plt.savefig(output_path)
     plt.close()
+
+    # Save the legend separately
+    fig_legend = plt.figure(figsize=(10, 2))
+    handles = []
+    labels = []
+    if colors:
+        for round, color in color_map.items():
+            handles.append(
+                plt.Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    color="w",
+                    markerfacecolor=color,
+                    markersize=10,
+                )
+            )
+            labels.append(f"Round {round}")
+    else:
+        unique_rounds = sorted(set(all_rounds))
+        cmap = plt.get_cmap("viridis")
+        for round in unique_rounds:
+            color = cmap(round / max(unique_rounds))
+            handles.append(
+                plt.Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    color="w",
+                    markerfacecolor=color,
+                    markersize=10,
+                )
+            )
+            labels.append(f"Round {round}")
+    fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
+    legend_path = output_path.parent / "legend.svg"
+    fig_legend.savefig(legend_path)
+    plt.close(fig_legend)
 
 
 def draw_tsne(config: dict):
@@ -80,7 +154,7 @@ def draw_tsne(config: dict):
                         texts_list=all_text,
                         rounds=all_round,
                         output_path=output_dir
-                        / f"tsne_{model_name}_{task}_{language}.png",
+                        / f"tsne_{model_name}_{task}_{language}.svg",
                         colors=config["color_family"],
                     )
 
@@ -93,7 +167,8 @@ def line(
     x_axis_name="Loop",
     y_axis_name="Score",
     colors=None,
-    output_path=None,
+    output_path: Path = None,
+    scale_y=False,
 ):
     """
     Draw a line chart with multiple lists using matplotlib.
@@ -108,32 +183,32 @@ def line(
     """
     plt.figure(figsize=(10, 6))
     for i, (series, label) in enumerate(zip(data_0, labels)):
-        # linestyle = '-' if refer == 'n-1' else '-'
         plt.plot(
             range(1, 5),
             series,
-            label=f'{label} 0',
+            label=f"{label} 0",
             color=colors[i] if colors else None,
-            linestyle = '-',
-            # linestyle=linestyle,
+            linestyle="-",
         )
     for i, (series, label) in enumerate(zip(data_n, labels)):
         plt.plot(
             range(1, 5),
             series,
-            label=f'{label} n-1',
+            label=f"{label} n-1",
             color=colors[i] if colors else None,
-            linestyle = '--',
-            # linestyle=linestyle,
+            linestyle="--",
         )
     plt.title(title)
     plt.xlabel(x_axis_name)
     plt.ylabel(y_axis_name)
     plt.xticks(range(1, 5))
-    plt.legend()
+    plt.yticks([0, 0.2, 0.4, 0.6, 0.8, 1])
     plt.grid(True)
     plt.tight_layout()
+    # plt.legend()
     # Save the plot to a file
+    if scale_y:
+        plt.ylim(0, 1)
     if output_path is not None:
         plt.savefig(output_path)
     plt.close()
@@ -193,22 +268,100 @@ def draw_line(
                 os.makedirs(output_dir, exist_ok=True)
                 output_path = (
                     output_dir
-                    / f"line_{metric_name}_{task}_{language}_all_{mode}.png"
+                    / f"line_{metric_name}_{task}_{language}_all_{mode}.svg"
                 )  # noqa: F821
                 line(
-                    data_0=data['0'],
-                    data_n=data['n-1'],
+                    data_0=data["0"],
+                    data_n=data["n-1"],
                     labels=model_list,
                     y_axis_name=metric_name,
                     colors=config["color_family"],
                     output_path=output_path,
                 )
 
+def draw_length_distribution(config) -> None:
+    for lang in ["en", "zh"]:
+        all_questions = {}
+        for task in ["medical", "financial", "legal"]:
+            original_questions, _ = load_qa(
+                lang=lang,
+                task_name=task,
+                count=config["data"]["doc_count"],
+                min_length=config["data"]["min_length"],
+                max_length=config["data"]["max_length"],
+                from_remote=False,
+            )
+            all_questions[task] = original_questions
 
-if __name__ == "__main__":
-    # Create a Path object for the current directory
+        # Plot the distribution of string lengths for each task using box plots
+        melted_data = pd.DataFrame(
+            {
+                "Category": [
+                    task for task in all_questions for _ in all_questions[task]
+                ],
+                "Text Length": [
+                    len(text)
+                    for task in all_questions
+                    for text in all_questions[task]
+                ],
+            }
+        )
+
+        # Remove outliers
+        Q1 = melted_data["Text Length"].quantile(0.25)
+        Q3 = melted_data["Text Length"].quantile(0.75)
+        IQR = Q3 - Q1
+        filtered_data = melted_data[
+            ~(
+                (melted_data["Text Length"] < (Q1 - 1.5 * IQR))
+                | (melted_data["Text Length"] > (Q3 + 1.5 * IQR))
+            )
+        ]
+
+        # 设置图像
+        plt.figure(figsize=(8, 6))
+
+        # 设置颜色
+        colors = config['color_family']
+        box = plt.boxplot(
+            [
+            filtered_data[filtered_data["Category"] == task]["Text Length"]
+            for task in all_questions
+            ],
+            patch_artist=True,
+            labels=all_questions.keys(),
+        )
+
+        # 设置箱线图颜色
+        for patch, color in zip(box["boxes"], colors):
+            patch.set_facecolor(color)
+
+        # 设置中间的分割线用黑色
+        for median in box['medians']:
+            median.set(color='black')
+
+        # 设置图表的标题
+        plt.title("Text Length Distribution (Box Plot)")
+
+        # 显示图像
+        output_path = (
+            chart_dir
+            / "string_length_distribution"
+            / f"length_{lang}_combined.svg"
+        )
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(output_path)
+        plt.close()
+
+
+def main():
     plt.rcParams["font.family"] = "Arial"
     plt.rcParams["figure.dpi"] = 600  # Set resolution to 600ppi
+    plt.rcParams["figure.figsize"] = [
+        8.27 * 0.25,
+        11.69 * 0.75,
+    ]  # A4 size is 8.27 x 11.69 inches
+    plt.rcParams["font.size"] = 12  # Set font size to 12pt
     current_dir = Path(__file__).parent
     with open(
         file=current_dir / "config.yml",
@@ -217,4 +370,8 @@ if __name__ == "__main__":
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
     # draw_tsne(config=config)
-    draw_line(config=config, metric_name="cosine")
+    # draw_line(config=config, metric_name="cosine")
+    draw_line(config=config, metric_name="rouge1")
+
+if __name__ == "__main__":
+    main()

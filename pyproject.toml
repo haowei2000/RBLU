@@ -30,7 +30,8 @@ build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core"]
 
 [tool.poetry.scripts]
-llm_eval = "llm_evaluation.main:main"
+eval = "llm_evaluation.main:main"
+draw = "llm_evaluation.chart:main"
 
 [tool.black]
 line-length = 50
