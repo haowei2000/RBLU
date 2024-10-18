@@ -125,7 +125,7 @@ def tsne(
             )
             labels.append(f"Round {round}")
     fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
-    legend_path = output_path.parent / "legend.svg"
+    legend_path = output_path.parent / "legend.pdf"
     fig_legend.savefig(legend_path)
     plt.close(fig_legend)
 
@@ -154,7 +154,7 @@ def draw_tsne(config: dict):
                         texts_list=all_text,
                         rounds=all_round,
                         output_path=output_dir
-                        / f"tsne_{model_name}_{task}_{language}.svg",
+                        / f"tsne_{model_name}_{task}_{language}.pdf",
                         colors=config["color_family"],
                     )
 
@@ -211,6 +211,7 @@ def line(
         plt.ylim(0, 1)
     if output_path is not None:
         plt.savefig(output_path)
+    
     plt.close()
 
 
@@ -268,7 +269,7 @@ def draw_line(
                 os.makedirs(output_dir, exist_ok=True)
                 output_path = (
                     output_dir
-                    / f"line_{metric_name}_{task}_{language}_all_{mode}.svg"
+                    / f"line_{metric_name}_{task}_{language}_all_{mode}.pdf"
                 )  # noqa: F821
                 line(
                     data_0=data["0"],
@@ -347,7 +348,7 @@ def draw_length_distribution(config) -> None:
         output_path = (
             chart_dir
             / "string_length_distribution"
-            / f"length_{lang}_combined.svg"
+            / f"length_{lang}_combined.pdf"
         )
         output_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output_path)
@@ -369,9 +370,10 @@ def main():
         encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
-    # draw_tsne(config=config)
-    # draw_line(config=config, metric_name="cosine")
+    draw_line(config=config, metric_name="cosine")
     draw_line(config=config, metric_name="rouge1")
+    draw_length_distribution(config=config)
+    # draw_tsne(config=config)
 
 if __name__ == "__main__":
     main()
