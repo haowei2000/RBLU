@@ -372,7 +372,7 @@ def main():
         config = yaml.safe_load(config_file)  # noqa: F821
     draw_line(config=config, metric_name="cosine")
     draw_line(config=config, metric_name="rouge1")
-    draw_length_distribution(config=config)
+    # draw_length_distribution(config=config)
     # draw_tsne(config=config)
 
 if __name__ == "__main__":
