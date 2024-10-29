@@ -10,6 +10,7 @@ from data_load import load_qa
 from path import chart_dir, project_dir, result_dir, score_dir
 from sentence_transformers import SentenceTransformer
 from sklearn.manifold import TSNE
+import numpy as np
 
 
 def tsne(
@@ -52,6 +53,7 @@ def tsne(
     fig = plt.figure(figsize=(10, 10))
     if n_components == 3:
         ax = fig.add_subplot(111, projection="3d")
+        ax.set_box_aspect([1, 1, 1])  # Make the axes aspect ratio equal
         if colors:
             color_map = {round: color for round, color in zip(rounds, colors)}
             scatter = ax.scatter(
@@ -86,6 +88,12 @@ def tsne(
             )
     else:
         raise ValueError("n_components must be either 2 or 3")
+
+    # Automatically set the axis limits
+    ax.set_xlim(X_embedded[:, 0].min(), X_embedded[:, 0].max())
+    ax.set_ylim(X_embedded[:, 1].min(), X_embedded[:, 1].max())
+    if n_components == 3:
+        ax.set_zlim(X_embedded[:, 2].min(), X_embedded[:, 2].max())
 
     # Save the plot to a file
     plt.savefig(output_path)
@@ -169,6 +177,7 @@ def line(
     colors=None,
     output_path: Path = None,
     scale_y=False,
+    yticks="1",
 ):
     """
     Draw a line chart with multiple lists using matplotlib.
@@ -189,6 +198,7 @@ def line(
             label=f"{label} 0",
             color=colors[i] if colors else None,
             linestyle="-",
+            linewidth=2,  # Make the line thicker
         )
     for i, (series, label) in enumerate(zip(data_n, labels)):
         plt.plot(
@@ -197,12 +207,18 @@ def line(
             label=f"{label} n-1",
             color=colors[i] if colors else None,
             linestyle="--",
+            linewidth=2,  # Make the line thicker
         )
     plt.title(title)
     plt.xlabel(x_axis_name)
     plt.ylabel(y_axis_name)
     plt.xticks(range(1, 5))
-    plt.yticks([0, 0.2, 0.4, 0.6, 0.8, 1])
+    if yticks == "max":
+        plt.yticks()
+    elif yticks == "1":
+        plt.yticks(ticks=[0, 0.2, 0.4, 0.6, 0.8, 1])
+    else:
+        raise ValueError("yticks must be either 'max' or '1'")
     plt.grid(True)
     plt.tight_layout()
     # plt.legend()
@@ -211,7 +227,7 @@ def line(
         plt.ylim(0, 1)
     if output_path is not None:
         plt.savefig(output_path)
-    
+
     plt.close()
 
 
@@ -264,21 +280,85 @@ def draw_line(
                         for model_scores in scores
                     ]
                     data[refer] = scores
-                if output_dir is None:
-                    output_dir = chart_dir / "line"
-                os.makedirs(output_dir, exist_ok=True)
-                output_path = (
-                    output_dir
-                    / f"line_{metric_name}_{task}_{language}_all_{mode}.pdf"
-                )  # noqa: F821
-                line(
-                    data_0=data["0"],
-                    data_n=data["n-1"],
-                    labels=model_list,
-                    y_axis_name=metric_name,
-                    colors=config["color_family"],
-                    output_path=output_path,
-                )
+                for y_ticks in ["max", "1"]:
+                    if output_dir is None:
+                        line_output_dir = chart_dir / "line" / y_ticks
+                    print(line_output_dir)
+                    os.makedirs(line_output_dir, exist_ok=True)
+                    output_path = (
+                        line_output_dir
+                        / f"line_{metric_name}_{task}_{language}_all_{mode}.eps"
+                    )  # noqa: F821
+                    line(
+                        data_0=data["0"],
+                        data_n=data["n-1"],
+                        labels=model_list,
+                        y_axis_name=metric_name,
+                        colors=config["color_family"],
+                        yticks=y_ticks,
+                        output_path=output_path,
+                    )
+                    # Draw bar chart
+                    bar_output_path = (
+                        line_output_dir
+                        / f"bar_{metric_name}_{task}_{language}_all_{mode}.pdf"
+                    )
+                    draw_bar_chart(
+                        data_0=data["0"],
+                        data_n=data["n-1"],
+                        labels=model_list,
+                        y_axis_name=metric_name,
+                        colors=config["color_family"],
+                        output_path=bar_output_path,
+                    )
+
+
+def draw_bar_chart(
+    data_0,
+    data_n,
+    labels,
+    y_axis_name="Score",
+    colors=None,
+    output_path: Path = None,
+):
+    """
+    Draw a bar chart with multiple lists using matplotlib.
+
+    :param data_0: List of lists, where each inner list represents a series of
+        data points for the initial round.
+    :param data_n: List of lists, where each inner list represents a series of
+        data points for the final round.
+    :param labels: List of labels for each series.
+    :param y_axis_name: Name of the y-axis.
+    :param colors: List of colors for each series.
+    :param output_path: Path to save the output plot.
+    """
+
+    x = np.arange(len(labels))  # the label locations
+    width = 0.35  # the width of the bars
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    rects1 = ax.bar(x - width / 2, [np.mean(series) for series in data_0], width, label='Round 0', color=colors[0] if colors else 'b')
+    rects2 = ax.bar(x + width / 2, [np.mean(series) for series in data_n], width, label='Round n-1', color=colors[1] if colors else 'r')
+
+    # Add some text for labels, title and custom x-axis tick labels, etc.
+    ax.set_ylabel(y_axis_name)
+    ax.set_title(f'{y_axis_name} by model and round')
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.legend()
+
+    fig.tight_layout()
+
+    if output_path is not None:
+        plt.savefig(output_path)
+
+    plt.close()
+
+
+
+
+
 
 def draw_length_distribution(config) -> None:
     for lang in ["en", "zh"]:
@@ -323,11 +403,11 @@ def draw_length_distribution(config) -> None:
         plt.figure(figsize=(8, 6))
 
         # 设置颜色
-        colors = config['color_family']
+        colors = config["color_family"]
         box = plt.boxplot(
             [
-            filtered_data[filtered_data["Category"] == task]["Text Length"]
-            for task in all_questions
+                filtered_data[filtered_data["Category"] == task]["Text Length"]
+                for task in all_questions
             ],
             patch_artist=True,
             labels=all_questions.keys(),
@@ -338,8 +418,8 @@ def draw_length_distribution(config) -> None:
             patch.set_facecolor(color)
 
         # 设置中间的分割线用黑色
-        for median in box['medians']:
-            median.set(color='black')
+        for median in box["medians"]:
+            median.set(color="black")
 
         # 设置图表的标题
         plt.title("Text Length Distribution (Box Plot)")
@@ -353,6 +433,8 @@ def draw_length_distribution(config) -> None:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output_path)
         plt.close()
+
+
 
 
 def main():
@@ -370,10 +452,11 @@ def main():
         encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
-    draw_line(config=config, metric_name="cosine")
-    draw_line(config=config, metric_name="rouge1")
+    # draw_line(config=config, metric_name="cosine")
+    # draw_line(config=config, metric_name="rouge1")
     # draw_length_distribution(config=config)
-    # draw_tsne(config=config)
+    draw_tsne(config=config)
+
 
 if __name__ == "__main__":
     main()
