@@ -10,7 +10,6 @@ from data_load import load_qa
 from path import chart_dir, project_dir, result_dir, score_dir
 from sentence_transformers import SentenceTransformer
 from sklearn.manifold import TSNE
-import numpy as np
 
 
 def tsne(
@@ -53,10 +52,9 @@ def tsne(
     fig = plt.figure(figsize=(10, 10))
     if n_components == 3:
         ax = fig.add_subplot(111, projection="3d")
-        ax.set_box_aspect([1, 1, 1])  # Make the axes aspect ratio equal
         if colors:
             color_map = {round: color for round, color in zip(rounds, colors)}
-            scatter = ax.scatter(
+            scatter: plt.PathCollection = ax.scatter(
                 X_embedded[:, 0],
                 X_embedded[:, 1],
                 X_embedded[:, 2],
@@ -88,13 +86,11 @@ def tsne(
             )
     else:
         raise ValueError("n_components must be either 2 or 3")
-
-    # Automatically set the axis limits
-    ax.set_xlim(X_embedded[:, 0].min(), X_embedded[:, 0].max())
-    ax.set_ylim(X_embedded[:, 1].min(), X_embedded[:, 1].max())
+    # Automatically adjust axis limits
+    ax.set_xlim(X_embedded[:, 0].min() - 1, X_embedded[:, 0].max() + 1)
+    ax.set_ylim(X_embedded[:, 1].min() - 1, X_embedded[:, 1].max() + 1)
     if n_components == 3:
-        ax.set_zlim(X_embedded[:, 2].min(), X_embedded[:, 2].max())
-
+        ax.set_zlim(X_embedded[:, 2].min() - 1, X_embedded[:, 2].max() + 1)
     # Save the plot to a file
     plt.savefig(output_path)
     plt.close()
@@ -133,7 +129,7 @@ def tsne(
             )
             labels.append(f"Round {round}")
     fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
-    legend_path = output_path.parent / "legend.pdf"
+    legend_path = output_path.parent / "legend.eps"
     fig_legend.savefig(legend_path)
     plt.close(fig_legend)
 
@@ -162,7 +158,7 @@ def draw_tsne(config: dict):
                         texts_list=all_text,
                         rounds=all_round,
                         output_path=output_dir
-                        / f"tsne_{model_name}_{task}_{language}.pdf",
+                        / f"tsne_{model_name}_{task}_{language}.eps",
                         colors=config["color_family"],
                     )
 
@@ -298,62 +294,6 @@ def draw_line(
                         yticks=y_ticks,
                         output_path=output_path,
                     )
-                    # Draw bar chart
-                    bar_output_path = (
-                        line_output_dir
-                        / f"bar_{metric_name}_{task}_{language}_all_{mode}.pdf"
-                    )
-                    draw_bar_chart(
-                        data_0=data["0"],
-                        data_n=data["n-1"],
-                        labels=model_list,
-                        y_axis_name=metric_name,
-                        colors=config["color_family"],
-                        output_path=bar_output_path,
-                    )
-
-
-def draw_bar_chart(
-    data_0,
-    data_n,
-    labels,
-    y_axis_name="Score",
-    colors=None,
-    output_path: Path = None,
-):
-    """
-    Draw a bar chart with multiple lists using matplotlib.
-
-    :param data_0: List of lists, where each inner list represents a series of
-        data points for the initial round.
-    :param data_n: List of lists, where each inner list represents a series of
-        data points for the final round.
-    :param labels: List of labels for each series.
-    :param y_axis_name: Name of the y-axis.
-    :param colors: List of colors for each series.
-    :param output_path: Path to save the output plot.
-    """
-
-    x = np.arange(len(labels))  # the label locations
-    width = 0.35  # the width of the bars
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-    rects1 = ax.bar(x - width / 2, [np.mean(series) for series in data_0], width, label='Round 0', color=colors[0] if colors else 'b')
-    rects2 = ax.bar(x + width / 2, [np.mean(series) for series in data_n], width, label='Round n-1', color=colors[1] if colors else 'r')
-
-    # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel(y_axis_name)
-    ax.set_title(f'{y_axis_name} by model and round')
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels)
-    ax.legend()
-
-    fig.tight_layout()
-
-    if output_path is not None:
-        plt.savefig(output_path)
-
-    plt.close()
 
 
 
