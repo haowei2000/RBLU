@@ -23,7 +23,7 @@ model:
     llama: /public/model/hub/LLM-Research/Meta-Llama-3-1-8B-Instruct/
     # gemma: /public/model/hub/AI-ModelScope/gemma-2-9b-it
     glm: /public/model/hub/ZhipuAI/glm-4-9b-chat
-    qwen: /public/model/hub/qwen/qwen2-7b-instruct
+    qwen: /public/model/hub/qwen/
 
 batch_size: 8
 

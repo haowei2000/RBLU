@@ -54,7 +54,7 @@ def tsne(
         ax = fig.add_subplot(111, projection="3d")
         if colors:
             color_map = {round: color for round, color in zip(rounds, colors)}
-            scatter = ax.scatter(
+            scatter: plt.PathCollection = ax.scatter(
                 X_embedded[:, 0],
                 X_embedded[:, 1],
                 X_embedded[:, 2],
@@ -86,7 +86,11 @@ def tsne(
             )
     else:
         raise ValueError("n_components must be either 2 or 3")
-
+    # Automatically adjust axis limits
+    ax.set_xlim(X_embedded[:, 0].min() - 1, X_embedded[:, 0].max() + 1)
+    ax.set_ylim(X_embedded[:, 1].min() - 1, X_embedded[:, 1].max() + 1)
+    if n_components == 3:
+        ax.set_zlim(X_embedded[:, 2].min() - 1, X_embedded[:, 2].max() + 1)
     # Save the plot to a file
     plt.savefig(output_path)
     plt.close()
@@ -125,7 +129,7 @@ def tsne(
             )
             labels.append(f"Round {round}")
     fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
-    legend_path = output_path.parent / "legend.pdf"
+    legend_path = output_path.parent / "legend.eps"
     fig_legend.savefig(legend_path)
     plt.close(fig_legend)
 
@@ -154,7 +158,7 @@ def draw_tsne(config: dict):
                         texts_list=all_text,
                         rounds=all_round,
                         output_path=output_dir
-                        / f"tsne_{model_name}_{task}_{language}.pdf",
+                        / f"tsne_{model_name}_{task}_{language}.eps",
                         colors=config["color_family"],
                     )
 
@@ -169,6 +173,7 @@ def line(
     colors=None,
     output_path: Path = None,
     scale_y=False,
+    yticks="1",
 ):
     """
     Draw a line chart with multiple lists using matplotlib.
@@ -189,6 +194,7 @@ def line(
             label=f"{label} 0",
             color=colors[i] if colors else None,
             linestyle="-",
+            linewidth=2,  # Make the line thicker
         )
     for i, (series, label) in enumerate(zip(data_n, labels)):
         plt.plot(
@@ -197,12 +203,18 @@ def line(
             label=f"{label} n-1",
             color=colors[i] if colors else None,
             linestyle="--",
+            linewidth=2,  # Make the line thicker
         )
     plt.title(title)
     plt.xlabel(x_axis_name)
     plt.ylabel(y_axis_name)
     plt.xticks(range(1, 5))
-    plt.yticks([0, 0.2, 0.4, 0.6, 0.8, 1])
+    if yticks == "max":
+        plt.yticks()
+    elif yticks == "1":
+        plt.yticks(ticks=[0, 0.2, 0.4, 0.6, 0.8, 1])
+    else:
+        raise ValueError("yticks must be either 'max' or '1'")
     plt.grid(True)
     plt.tight_layout()
     # plt.legend()
@@ -211,7 +223,7 @@ def line(
         plt.ylim(0, 1)
     if output_path is not None:
         plt.savefig(output_path)
-    
+
     plt.close()
 
 
@@ -264,21 +276,29 @@ def draw_line(
                         for model_scores in scores
                     ]
                     data[refer] = scores
-                if output_dir is None:
-                    output_dir = chart_dir / "line"
-                os.makedirs(output_dir, exist_ok=True)
-                output_path = (
-                    output_dir
-                    / f"line_{metric_name}_{task}_{language}_all_{mode}.pdf"
-                )  # noqa: F821
-                line(
-                    data_0=data["0"],
-                    data_n=data["n-1"],
-                    labels=model_list,
-                    y_axis_name=metric_name,
-                    colors=config["color_family"],
-                    output_path=output_path,
-                )
+                for y_ticks in ["max", "1"]:
+                    if output_dir is None:
+                        line_output_dir = chart_dir / "line" / y_ticks
+                    print(line_output_dir)
+                    os.makedirs(line_output_dir, exist_ok=True)
+                    output_path = (
+                        line_output_dir
+                        / f"line_{metric_name}_{task}_{language}_all_{mode}.eps"
+                    )  # noqa: F821
+                    line(
+                        data_0=data["0"],
+                        data_n=data["n-1"],
+                        labels=model_list,
+                        y_axis_name=metric_name,
+                        colors=config["color_family"],
+                        yticks=y_ticks,
+                        output_path=output_path,
+                    )
+
+
+
+
+
 
 def draw_length_distribution(config) -> None:
     for lang in ["en", "zh"]:
@@ -323,11 +343,11 @@ def draw_length_distribution(config) -> None:
         plt.figure(figsize=(8, 6))
 
         # 设置颜色
-        colors = config['color_family']
+        colors = config["color_family"]
         box = plt.boxplot(
             [
-            filtered_data[filtered_data["Category"] == task]["Text Length"]
-            for task in all_questions
+                filtered_data[filtered_data["Category"] == task]["Text Length"]
+                for task in all_questions
             ],
             patch_artist=True,
             labels=all_questions.keys(),
@@ -338,8 +358,8 @@ def draw_length_distribution(config) -> None:
             patch.set_facecolor(color)
 
         # 设置中间的分割线用黑色
-        for median in box['medians']:
-            median.set(color='black')
+        for median in box["medians"]:
+            median.set(color="black")
 
         # 设置图表的标题
         plt.title("Text Length Distribution (Box Plot)")
@@ -353,6 +373,8 @@ def draw_length_distribution(config) -> None:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output_path)
         plt.close()
+
+
 
 
 def main():
@@ -370,10 +392,11 @@ def main():
         encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
-    draw_line(config=config, metric_name="cosine")
-    draw_line(config=config, metric_name="rouge1")
+    # draw_line(config=config, metric_name="cosine")
+    # draw_line(config=config, metric_name="rouge1")
     # draw_length_distribution(config=config)
-    # draw_tsne(config=config)
+    draw_tsne(config=config)
+
 
 if __name__ == "__main__":
     main()
