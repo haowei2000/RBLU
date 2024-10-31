@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import datasets
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import pandas as pd
 import torch
@@ -10,170 +11,119 @@ from data_load import load_qa
 from path import chart_dir, project_dir, result_dir, score_dir
 from sentence_transformers import SentenceTransformer
 from sklearn.manifold import TSNE
+import matplotlib as mpl
 
 
 def tsne(
     texts_list,
-    rounds,
-    output_path: Path,
     vector=None,
     colors=None,
-    n_components=3,
+    ax: Axes = None,
 ):
-    """
-    Draw a TSNE plot with multiple lists in 2D or 3D.
-
-    :param texts_list: List of lists, where each inner list contains texts
-        for a specific round.
-    :param rounds: List of round numbers corresponding to each list of texts.
-    :param output_path: Path to save the output plot.
-    :param vector: Precomputed vector representations of texts (optional).
-    :param colors: List of colors for each round (optional).
-    :param n_components: Number of dimensions for TSNE (2 or 3).
-    """
-    all_texts = []
-    all_rounds = []
-
-    for texts, round in zip(texts_list, rounds):
-        all_texts.extend(texts)
-        all_rounds.extend([round] * len(texts))
-    if vector is None:
-        model = SentenceTransformer(
-            "all-MiniLM-L6-v2",
-            device="cuda" if torch.cuda.is_available() else "cpu",
+    # Automatically find a device with available memory, prioritizing cuda:1
+    doc_count = len(texts_list[0])
+    texts_flat = [item for sublist in texts_list for item in sublist]
+    if torch.cuda.is_available():
+        device = torch.device(
+            "cuda:1" if torch.cuda.device_count() > 1 else "cuda:0"
         )
-        X = model.encode(all_texts, normalize_embeddings=True, batch_size=32)
-
+    else:
+        device = torch.device("cpu")
+    print(f"device is {device}")
+    model = SentenceTransformer(
+        "all-MiniLM-L6-v2",
+        device=device,
+    )
+    X = model.encode(texts_flat, normalize_embeddings=True, batch_size=50)
     # t-SNE dimensionality reduction
-    tsne = TSNE(n_components=n_components, perplexity=30, max_iter=1000)
-    X_embedded = tsne.fit_transform(X)
-
-    # Visualization
-    fig = plt.figure(figsize=(10, 10))
-    if n_components == 3:
-        ax = fig.add_subplot(111, projection="3d")
-        if colors:
-            color_map = {round: color for round, color in zip(rounds, colors)}
-            scatter: plt.PathCollection = ax.scatter(
-                X_embedded[:, 0],
-                X_embedded[:, 1],
-                X_embedded[:, 2],
-                c=[color_map[round] for round in all_rounds],
-            )
-        else:
-            scatter = ax.scatter(
-                X_embedded[:, 0],
-                X_embedded[:, 1],
-                X_embedded[:, 2],
-                c=all_rounds,
-                cmap="viridis",
-            )
-    elif n_components == 2:
-        ax = fig.add_subplot(111)
-        if colors:
-            color_map = {round: color for round, color in zip(rounds, colors)}
-            scatter = ax.scatter(
-                X_embedded[:, 0],
-                X_embedded[:, 1],
-                c=[color_map[round] for round in all_rounds],
-            )
-        else:
-            scatter = ax.scatter(
-                X_embedded[:, 0],
-                X_embedded[:, 1],
-                c=all_rounds,
-                cmap="viridis",
-            )
-    else:
-        raise ValueError("n_components must be either 2 or 3")
-    # Automatically adjust axis limits
-    ax.set_xlim(X_embedded[:, 0].min() - 1, X_embedded[:, 0].max() + 1)
-    ax.set_ylim(X_embedded[:, 1].min() - 1, X_embedded[:, 1].max() + 1)
-    if n_components == 3:
-        ax.set_zlim(X_embedded[:, 2].min() - 1, X_embedded[:, 2].max() + 1)
-    # Save the plot to a file
-    plt.savefig(output_path)
-    plt.close()
-
-    # Save the legend separately
-    fig_legend = plt.figure(figsize=(10, 2))
-    handles = []
-    labels = []
-    if colors:
-        for round, color in color_map.items():
-            handles.append(
-                plt.Line2D(
-                    [0],
-                    [0],
-                    marker="o",
-                    color="w",
-                    markerfacecolor=color,
-                    markersize=10,
+    tsne = TSNE(n_components=3, perplexity=30, max_iter=1000)
+    X_tsne = tsne.fit_transform(X)
+    if vector is None:
+        for round in range(len(texts_list)):
+            ax.view_init(elev=30, azim=45)
+            if colors:
+                ax.scatter(
+                    X_tsne[round * doc_count : (round + 1) * doc_count, 0],
+                    X_tsne[round * doc_count : (round + 1) * doc_count, 1],
+                    X_tsne[round * doc_count : (round + 1) * doc_count, 2],
+                    c=colors[round],
+                    s=10,
+                    label=round,
                 )
-            )
-            labels.append(f"Round {round}")
-    else:
-        unique_rounds = sorted(set(all_rounds))
-        cmap = plt.get_cmap("viridis")
-        for round in unique_rounds:
-            color = cmap(round / max(unique_rounds))
-            handles.append(
-                plt.Line2D(
-                    [0],
-                    [0],
-                    marker="o",
-                    color="w",
-                    markerfacecolor=color,
-                    markersize=10,
+            else:
+                ax.scatter(
+                    X_tsne[round * doc_count : (round + 1) * doc_count, 0],
+                    X_tsne[round * doc_count : (round + 1) * doc_count, 1],
+                    X_tsne[round * doc_count : (round + 1) * doc_count, 2],
+                    s=10,
+                    label=round,
                 )
-            )
-            labels.append(f"Round {round}")
-    fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
-    legend_path = output_path.parent / "legend.eps"
-    fig_legend.savefig(legend_path)
-    plt.close(fig_legend)
+    else:
+        raise NotImplementedError
+    # ax.set_xlim(-30, 30)
+    # ax.set_ylim(-30, 30)
+    # ax.set_zlim(-30, 30)
+    return ax
 
 
-def draw_tsne(config: dict):
-    for model_name in ["glm", "llama", "qwen"]:
-        for language in config["language_list"]:
-            for task in config["task_list"]:
-                for mode in ["q", "a"]:
+def draw_tsne(config: dict, suffix: str = "png"):
+    fig, axs = plt.subplots(
+        len(config["task_list"]) * len(config["language_list"]),
+        len(config["model_list"]),
+        figsize=(
+            8.27,
+            11.69,
+        ),
+        subplot_kw={"projection": "3d"},
+    )
+    for mode in ["q"]:
+        row, col = -1, -1
+        for model_name in config["model_list"]:
+            col = col + 1
+            row = -1
+            for language in config["language_list"]:
+                for task in config["task_list"]:
+                    row = row + 1
                     data_path = result_dir / f"{model_name}_{task}_{language}"
                     qa_dataset = datasets.load_from_disk(data_path)
-                    all_text, all_round = zip(
-                        *[
-                            (
-                                qa_dataset.select_columns(f"{mode}{round}")[
-                                    f"{mode}{round}"
-                                ],
-                                round,
-                            )
-                            for round in range(5)
+                    all_text = [
+                        qa_dataset.select_columns(f"{mode}{round}")[
+                            f"{mode}{round}"
                         ]
-                    )
-                    output_dir = chart_dir / "tsne"
-                    os.makedirs(output_dir, exist_ok=True)
-                    tsne(
+                        for round in range(5)
+                    ]
+                    ax = tsne(
                         texts_list=all_text,
-                        rounds=all_round,
-                        output_path=output_dir
-                        / f"tsne_{model_name}_{task}_{language}.eps",
+                        ax=axs[row][col],
                         colors=config["color_family"],
                     )
+                    # if col == 0:
+                    #     ax.set_title(
+                    #         label=f"{task.capitalize()} {translate_language_code(language).capitalize()}",
+                    #         loc="left",
+                    #         rotation=90,
+                    #     )
+                    # if row == 0:
+                    #     ax.set_title(
+                    #         label=f"{model_name.capitalize()}",
+                    #         loc="center",
+                    #     )
+        tsne_output_dir = chart_dir / "tsne"
+        print(tsne_output_dir)
+
+        plt.tight_layout()
+        os.makedirs(tsne_output_dir, exist_ok=True)
+        output_path = tsne_output_dir / f"tsne{mode}_combined_plots.{suffix}"  # noqa: F821
+        plt.savefig(output_path)
 
 
 def line(
     data_0,
     data_n,
     labels,
-    title="",
-    x_axis_name="Loop",
-    y_axis_name="Score",
     colors=None,
     output_path: Path = None,
-    scale_y=False,
-    yticks="1",
+    ax: plt.Axes = None,
 ):
     """
     Draw a line chart with multiple lists using matplotlib.
@@ -186,9 +136,8 @@ def line(
     :param y_axis_name: Name of the y-axis.
     :param colors: List of colors for each series.
     """
-    plt.figure(figsize=(10, 6))
     for i, (series, label) in enumerate(zip(data_0, labels)):
-        plt.plot(
+        ax.plot(
             range(1, 5),
             series,
             label=f"{label} 0",
@@ -197,7 +146,7 @@ def line(
             linewidth=2,  # Make the line thicker
         )
     for i, (series, label) in enumerate(zip(data_n, labels)):
-        plt.plot(
+        ax.plot(
             range(1, 5),
             series,
             label=f"{label} n-1",
@@ -205,26 +154,14 @@ def line(
             linestyle="--",
             linewidth=2,  # Make the line thicker
         )
-    plt.title(title)
-    plt.xlabel(x_axis_name)
-    plt.ylabel(y_axis_name)
-    plt.xticks(range(1, 5))
-    if yticks == "max":
-        plt.yticks()
-    elif yticks == "1":
-        plt.yticks(ticks=[0, 0.2, 0.4, 0.6, 0.8, 1])
-    else:
-        raise ValueError("yticks must be either 'max' or '1'")
-    plt.grid(True)
-    plt.tight_layout()
+    ax.grid(True)
     # plt.legend()
     # Save the plot to a file
-    if scale_y:
-        plt.ylim(0, 1)
+    ax.set_xticks([1, 2, 3, 4])
+    ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
     if output_path is not None:
         plt.savefig(output_path)
-
-    plt.close()
+    return ax
 
 
 def _combine_score(
@@ -251,53 +188,113 @@ def _combine_score(
     return result
 
 
+def translate_language_code(code):
+    # 定义字典映射
+    translation_dict = {"zh": "chinese", "en": "english"}
+
+    # 获取翻译
+    return translation_dict.get(code, "unknown")
+
+
 def draw_line(
     config,
-    metric_name="rouge1",
+    metric_list=None,
     output_dir: str | Path = None,
 ):
+    plt.rcParams["figure.figsize"] = [
+        8.27 * 0.75,
+        11.69 * 0.75,
+    ]  # A4 size is 8.27 x 11.69 inches
     for mode in ["q", "a"]:
+        fig, axs = plt.subplots(
+            len(config["task_list"]),
+            len(config["language_list"] * len(metric_list)),
+        )  # 2x2 网格的子图
+        row = -1
         model_list = config["model_list"]
-        for language in config["language_list"]:
-            for task in config["task_list"]:
-                data = {}
-                for refer in ["0", "n-1"]:
-                    scores = _combine_score(
-                        model_list=model_list,
-                        language=language,
-                        task=task,
-                        metric_name=metric_name,
-                        mode=mode,
-                        refer=refer,
-                    )
-                    # Print the scores rounded to three decimal places
-                    scores = [
-                        [round(score, 3) for score in model_scores]
-                        for model_scores in scores
-                    ]
-                    data[refer] = scores
-                for y_ticks in ["max", "1"]:
-                    if output_dir is None:
-                        line_output_dir = chart_dir / "line" / y_ticks
-                    print(line_output_dir)
-                    os.makedirs(line_output_dir, exist_ok=True)
-                    output_path = (
-                        line_output_dir
-                        / f"line_{metric_name}_{task}_{language}_all_{mode}.eps"
-                    )  # noqa: F821
-                    line(
+        for task in config["task_list"]:
+            row = row + 1
+            col = -1
+            for language in config["language_list"]:
+                for metric_name in metric_list:
+                    col = col + 1
+                    data = {}
+                    for refer in ["0", "n-1"]:
+                        scores = _combine_score(
+                            model_list=model_list,
+                            language=language,
+                            task=task,
+                            metric_name=metric_name,
+                            mode=mode,
+                            refer=refer,
+                        )
+                        # Print the scores rounded to three decimal places
+                        scores = [
+                            [round(score, 3) for score in model_scores]
+                            for model_scores in scores
+                        ]
+                        data[refer] = scores
+                    ax = line(
                         data_0=data["0"],
                         data_n=data["n-1"],
                         labels=model_list,
-                        y_axis_name=metric_name,
                         colors=config["color_family"],
-                        yticks=y_ticks,
-                        output_path=output_path,
+                        output_path=None,
+                        ax=axs[row][col],
                     )
+                    # set the ticks: only the left and the bottom show
+                    if row != axs.shape[0] - 1:
+                        ax.set_xticklabels(["", "", "", ""])
+                    if col != 0:
+                        ax.set_yticklabels(["", "", "", "", "", ""])
+                    else:
+                        ax.set_yticklabels(
+                            ["", "0.2", "0.4", "0.6", "0.8", "1.0"]
+                        )
+                    # set the title task title in right and language_metric title in top
+                    if row == 0:
+                        ax.set_title(
+                            f"{metric_name.capitalize()} "
+                            f"{translate_language_code(language).capitalize()}",
+                            loc="center",
+                        )
+                    if col == axs.shape[1] - 1:
+                        ax.set_title(
+                            label=f"{task.capitalize()}",
+                            loc="right",
+                            rotation=90,
+                            y=0.5,
+                            x=1.15,
+                        )
+                    # set the label name
+                    if col == 0 and row == 0:
+                        ax.set_ylabel("Score", loc="top")
+                    if col == axs.shape[1] - 1 and row == axs.shape[0] - 1:
+                        ax.set_xlabel("Round", loc="right")
+                    ax.xaxis.set_label_coords(1.2, -0.1)
+                    ax.yaxis.set_label_coords(-0.3, 1.1)
+        # 保存图形
+        if output_dir is None:
+            line_output_dir = chart_dir / "line"
 
+        # output legend
+        ax = axs.flat[0]
+        # Save the legend separately
+        fig_legend = plt.figure(figsize=(10, 2))
+        handles, labels = ax.get_legend_handles_labels()
+        fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
+        legend_path = line_output_dir / "legend.eps"
+        fig_legend.savefig(legend_path)
+        plt.close(fig_legend)
 
-
-
+        plt.tight_layout()
+        plt.subplots_adjust(
+            left=0.05, right=0.95, top=0.95, bottom=0.05, hspace=0, wspace=0
+        )
+        print(line_output_dir)
+        os.makedirs(line_output_dir, exist_ok=True)
+        output_path = line_output_dir / f"line_{mode}_combined_plots.eps"  # noqa: F821
+        plt.savefig(output_path)
 
 
 def draw_length_distribution(config) -> None:
@@ -310,7 +307,7 @@ def draw_length_distribution(config) -> None:
                 count=config["data"]["doc_count"],
                 min_length=config["data"]["min_length"],
                 max_length=config["data"]["max_length"],
-                from_remote=False,
+                from_remote=True,
             )
             all_questions[task] = original_questions
 
@@ -338,7 +335,12 @@ def draw_length_distribution(config) -> None:
                 | (melted_data["Text Length"] > (Q3 + 1.5 * IQR))
             )
         ]
-
+        # Calculate and print the average length for each task
+        for task in all_questions:
+            avg_length = filtered_data[filtered_data["Category"] == task][
+                "Text Length"
+            ].mean()
+            print(f"Average length for {task} ({lang}): {avg_length:.2f}")
         # 设置图像
         plt.figure(figsize=(8, 6))
 
@@ -375,16 +377,17 @@ def draw_length_distribution(config) -> None:
         plt.close()
 
 
-
-
 def main():
-    plt.rcParams["font.family"] = "Arial"
-    plt.rcParams["figure.dpi"] = 600  # Set resolution to 600ppi
-    plt.rcParams["figure.figsize"] = [
-        8.27 * 0.25,
+    mpl.rcParams["figure.figsize"] = [
+        8.27 * 0.75,
         11.69 * 0.75,
     ]  # A4 size is 8.27 x 11.69 inches
-    plt.rcParams["font.size"] = 12  # Set font size to 12pt
+    # mpl.rcParams["font.size"] = 12  # 设置默认字体大小
+    # mpl.rcParams["axes.titlesize"] = 12  # 设置标题字体大小
+    # mpl.rcParams["axes.labelsize"] = 12  # 设置轴标签字体大小
+    # mpl.rcParams["xtick.labelsize"] = 12  # 设置 x 轴刻度标签字体大小
+    # mpl.rcParams["ytick.labelsize"] = 12
+    mpl.rc("font", family="Times New Roman")
     current_dir = Path(__file__).parent
     with open(
         file=current_dir / "config.yml",
@@ -392,10 +395,10 @@ def main():
         encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
-    # draw_line(config=config, metric_name="cosine")
+    draw_line(config=config, metric_list=["cosine", "rouge1"])
     # draw_line(config=config, metric_name="rouge1")
     # draw_length_distribution(config=config)
-    draw_tsne(config=config)
+    # draw_tsne(config=config, suffix="png")
 
 
 if __name__ == "__main__":

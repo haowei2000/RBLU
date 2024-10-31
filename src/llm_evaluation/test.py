@@ -1,14 +1,40 @@
-import yaml
-from main import create_generator
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.manifold import TSNE
+import numpy as np
+import matplotlib.pyplot as plt
 
-with open(
-    "config.yml",
-    "r",
-    encoding="utf-8",
-) as config_file:
-    config = yaml.safe_load(config_file)
-generator = create_generator(config=config)
-result = generator(
-    ["下面是一篇论文的摘要，请提炼其中的研究方法，每个方法用一个词语概况，用1、 2、 3、的格式回答：[目的/意义]探索基于可解释性理论的数据故事化解释效果评价方法对于拓展可解释性方法、推动故事化应用具有重要意义。[方法/过程]在述评可解释性理论、数据故事化的解释作用及解释效果评价等内容的基础上，构建了一个结合可解释性结果的数据故事化解释模型及公式化表达和评价指标体系。本研究通过实证分析，采用问卷调查法的半定量分析与基于指标参数的定量分析方法，对所提出的评价方案进行验证，明确了数据故事化在增强结果可解释性中的作用。[结果/结论]将可解释性结果以数据故事的形式呈现，能显著提高用户的理解效果和接受度。本研究不仅丰富了可解释性理论和数据故事化领域的研究，也为实践中评价模型解释效果提供了有价值的指导方案。[创新/局限]数据故事化的解释效果评价为衡量可解释性、可理解性等指标提供了新的视角与方案，但对于评价模型的改进与优化策略有待深入研究。"]
-)
-print(result)
+# 查看可用的样式
+print(plt.style.available)
+plt.style.use("seaborn-v0_8-paper")
+# 示例多轮数据，每轮数据代表高维特征和对应标签
+data_rounds = {
+    "Round 1": {"features": np.random.rand(50, 10), "color": "blue"},
+    "Round 2": {"features": np.random.rand(50, 10), "color": "green"},
+    "Round 3": {"features": np.random.rand(50, 10), "color": "orange"},
+    "Round 4": {"features": np.random.rand(50, 10), "color": "red"},
+}
+
+# 创建一个3D绘图对象
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, projection="3d")
+
+# 对每轮数据执行t-SNE并绘制
+for round_name, data in data_rounds.items():
+    # t-SNE降维至3D
+    tsne = TSNE(n_components=3, random_state=42)
+    X_tsne = tsne.fit_transform(data["features"])
+
+    # 绘制每轮数据的3D散点图，指定颜色
+    ax.scatter(
+        X_tsne[:, 0], X_tsne[:, 1], X_tsne[:, 2], label=round_name, s=60
+    )
+
+# 设置图例、标题和轴标签
+ax.set_title("3D t-SNE Visualization of Multiple Rounds")
+ax.set_xlabel("t-SNE Component 1")
+ax.set_ylabel("t-SNE Component 2")
+ax.set_zlabel("t-SNE Component 3")
+ax.legend()
+
+plt.savefig("test.png")
