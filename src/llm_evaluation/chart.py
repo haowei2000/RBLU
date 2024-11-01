@@ -164,6 +164,52 @@ def line(
     return ax
 
 
+def bar(
+    data_0,
+    data_n,
+    labels,
+    colors=None,
+    output_path: Path = None,
+    ax: plt.Axes = None,
+):
+    """
+    Draw a bar chart with multiple lists using matplotlib.
+
+    :param data_0: List of lists, where each inner list represents a series of
+        data points for the first set.
+    :param data_n: List of lists, where each inner list represents a series of
+        data points for the second set.
+    :param labels: List of labels for each series.
+    :param colors: List of colors for each series.
+    """
+    bar_width = 0.1  # Width of the bars
+    index = range(1, 5)  # X-axis positions
+
+    for i, (series, label) in enumerate(zip(data_0, labels)):
+        ax.bar(
+            [x - (i+1)*bar_width  for x in index],
+            series,
+            bar_width,
+            label=f"{label} 0",
+            color=colors[i] if colors else None,
+        )
+    for i, (series, label) in enumerate(zip(data_n, labels)):
+        ax.bar(
+            x=[x - (i+1+len(labels))*bar_width for x in index],
+            height=series,
+            width=bar_width,
+            label=f"{label} n-1",
+            color=colors[i] if colors else None,
+            hatch = '//////'
+        )
+    ax.grid(True)
+    ax.set_xticks(index)
+    ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+    if output_path is not None:
+        plt.savefig(output_path)
+    return ax
+
+
 def _combine_score(
     model_list: list[str],
     language: str,
@@ -196,10 +242,11 @@ def translate_language_code(code):
     return translation_dict.get(code, "unknown")
 
 
-def draw_line(
+def draw_score(
     config,
     metric_list=None,
     output_dir: str | Path = None,
+    chart_type: str = "bar",
 ):
     plt.rcParams["figure.figsize"] = [
         8.27 * 0.75,
@@ -234,7 +281,7 @@ def draw_line(
                             for model_scores in scores
                         ]
                         data[refer] = scores
-                    ax = line(
+                    ax = bar(
                         data_0=data["0"],
                         data_n=data["n-1"],
                         labels=model_list,
@@ -272,18 +319,18 @@ def draw_line(
                     if col == axs.shape[1] - 1 and row == axs.shape[0] - 1:
                         ax.set_xlabel("Round", loc="right")
                     ax.xaxis.set_label_coords(1.2, -0.1)
-                    ax.yaxis.set_label_coords(-0.3, 1.1)
+                    ax.yaxis.set_label_coords(-0.1, 0.96)
         # 保存图形
         if output_dir is None:
-            line_output_dir = chart_dir / "line"
-
+            chart_output_dir = chart_dir / chart_type
+        os.makedirs(chart_output_dir, exist_ok=True)
         # output legend
         ax = axs.flat[0]
         # Save the legend separately
         fig_legend = plt.figure(figsize=(10, 2))
         handles, labels = ax.get_legend_handles_labels()
         fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
-        legend_path = line_output_dir / "legend.eps"
+        legend_path = chart_output_dir / "legend.eps"
         fig_legend.savefig(legend_path)
         plt.close(fig_legend)
 
@@ -291,9 +338,8 @@ def draw_line(
         plt.subplots_adjust(
             left=0.05, right=0.95, top=0.95, bottom=0.05, hspace=0, wspace=0
         )
-        print(line_output_dir)
-        os.makedirs(line_output_dir, exist_ok=True)
-        output_path = line_output_dir / f"line_{mode}_combined_plots.eps"  # noqa: F821
+        print(chart_output_dir)
+        output_path = chart_output_dir / f"{chart_type}_{mode}_combined_plots.eps"  # noqa: F821
         plt.savefig(output_path)
 
 
@@ -395,7 +441,7 @@ def main():
         encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
-    draw_line(config=config, metric_list=["cosine", "rouge1"])
+    draw_score(config=config, metric_list=["cosine", "rouge1"])
     # draw_line(config=config, metric_name="rouge1")
     # draw_length_distribution(config=config)
     # draw_tsne(config=config, suffix="png")
