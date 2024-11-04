@@ -1,40 +1,43 @@
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from sklearn.manifold import TSNE
 import numpy as np
-import matplotlib.pyplot as plt
 
-# 查看可用的样式
-print(plt.style.available)
-plt.style.use("seaborn-v0_8-paper")
-# 示例多轮数据，每轮数据代表高维特征和对应标签
-data_rounds = {
-    "Round 1": {"features": np.random.rand(50, 10), "color": "blue"},
-    "Round 2": {"features": np.random.rand(50, 10), "color": "green"},
-    "Round 3": {"features": np.random.rand(50, 10), "color": "orange"},
-    "Round 4": {"features": np.random.rand(50, 10), "color": "red"},
-}
+# 创建数据
+x = np.linspace(0, 10, 100)
+y1 = np.sin(x)
+y2 = np.cos(x)
 
-# 创建一个3D绘图对象
-fig = plt.figure(figsize=(10, 8))
-ax = fig.add_subplot(111, projection="3d")
+# 创建子图
+fig, axs = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
 
-# 对每轮数据执行t-SNE并绘制
-for round_name, data in data_rounds.items():
-    # t-SNE降维至3D
-    tsne = TSNE(n_components=3, random_state=42)
-    X_tsne = tsne.fit_transform(data["features"])
+# 绘制第一个子图
+axs[0].plot(x, y1, label="sin(x)", color="blue")
+axs[0].set_title("Sine Function")
+axs[0].set_ylabel("Amplitude")
 
-    # 绘制每轮数据的3D散点图，指定颜色
-    ax.scatter(
-        X_tsne[:, 0], X_tsne[:, 1], X_tsne[:, 2], label=round_name, s=60
+# 绘制第二个子图
+axs[1].plot(x, y2, label="cos(x)", color="orange")
+axs[1].set_title("Cosine Function")
+axs[1].set_ylabel("Amplitude")
+
+# 获取整个图形的宽度
+fig_width = fig.get_figwidth()
+# 获取子图之间的y坐标位置（中间的虚线位置）
+y_line = axs[0].get_position().y0
+
+# 在子图之间添加虚线
+fig.add_artist(
+    plt.Line2D(
+        (0, 1),
+        (y_line, y_line),
+        color="black",
+        linestyle="--",
+        transform=fig.transFigure,
+        figure=fig,
     )
+)
 
-# 设置图例、标题和轴标签
-ax.set_title("3D t-SNE Visualization of Multiple Rounds")
-ax.set_xlabel("t-SNE Component 1")
-ax.set_ylabel("t-SNE Component 2")
-ax.set_zlabel("t-SNE Component 3")
-ax.legend()
+# 调整布局
+plt.tight_layout()
 
+# 显示图形
 plt.savefig("test.png")

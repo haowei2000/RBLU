@@ -40,24 +40,18 @@ def tsne(
     X_tsne = tsne.fit_transform(X)
     if vector is None:
         for round in range(len(texts_list)):
-            ax.view_init(elev=30, azim=45)
             if colors:
                 ax.scatter(
-                    X_tsne[round * doc_count : (round + 1) * doc_count, 0],
-                    X_tsne[round * doc_count : (round + 1) * doc_count, 1],
-                    X_tsne[round * doc_count : (round + 1) * doc_count, 2],
+                    xs=X_tsne[round * doc_count : (round + 1) * doc_count, 0],
+                    ys=X_tsne[round * doc_count : (round + 1) * doc_count, 1],
+                    zs=X_tsne[round * doc_count : (round + 1) * doc_count, 2],
                     c=colors[round],
-                    s=10,
-                    label=round,
+                    s=5,
+                    label=f"Round {round}",
+                    alpha=0.7 - round * 0.1,  # Set transparency
                 )
             else:
-                ax.scatter(
-                    X_tsne[round * doc_count : (round + 1) * doc_count, 0],
-                    X_tsne[round * doc_count : (round + 1) * doc_count, 1],
-                    X_tsne[round * doc_count : (round + 1) * doc_count, 2],
-                    s=10,
-                    label=round,
-                )
+                raise NotImplementedError
     else:
         raise NotImplementedError
     # ax.set_xlim(-30, 30)
@@ -66,23 +60,35 @@ def tsne(
     return ax
 
 
-def draw_tsne(config: dict, suffix: str = "png"):
+def draw_tsne(config: dict, suffix: str = "eps"):
     fig, axs = plt.subplots(
         len(config["task_list"]) * len(config["language_list"]),
         len(config["model_list"]),
         figsize=(
-            8.27,
-            11.69,
+            5 * len(config["model_list"]),
+            5 * len(config["task_list"]) * len(config["language_list"]),
         ),
         subplot_kw={"projection": "3d"},
     )
+    plt.rcParams.update(
+        {
+            "axes.labelsize": 12,  # Set axis label font size
+            "axes.titlesize": 18,  # Set title font size
+            "xtick.labelsize": 10,  # Set x-axis tick label font size
+            "ytick.labelsize": 10,  # Set y-axis tick label font size
+            "legend.fontsize": 12,  # Set legend font size
+        }
+    )
+    model_list = config["model_list"]
+    language_list = config["language_list"]
+    task_list = config["task_list"]
     for mode in ["q"]:
         row, col = -1, -1
-        for model_name in config["model_list"]:
+        for model_name in model_list:
             col = col + 1
             row = -1
-            for language in config["language_list"]:
-                for task in config["task_list"]:
+            for language in language_list:
+                for task in task_list:
                     row = row + 1
                     data_path = result_dir / f"{model_name}_{task}_{language}"
                     qa_dataset = datasets.load_from_disk(data_path)
@@ -97,23 +103,61 @@ def draw_tsne(config: dict, suffix: str = "png"):
                         ax=axs[row][col],
                         colors=config["color_family"],
                     )
-                    # if col == 0:
-                    #     ax.set_title(
-                    #         label=f"{task.capitalize()} {translate_language_code(language).capitalize()}",
-                    #         loc="left",
-                    #         rotation=90,
-                    #     )
-                    # if row == 0:
-                    #     ax.set_title(
-                    #         label=f"{model_name.capitalize()}",
-                    #         loc="center",
-                    #     )
+                    ax.tick_params(axis="x", pad=0)  # x轴标签距离
+                    ax.tick_params(axis="y", pad=0)  # y轴标签距离
+                    ax.tick_params(axis="z", pad=0)  # y轴标签距离
+        left_offset = 0
+        top_offset = 0
         tsne_output_dir = chart_dir / "tsne"
-        print(tsne_output_dir)
+        # 在子图之间添加水平虚线——
+        for row in range(0, axs.shape[0] + 1):
+            if row != axs.shape[0]:
+                y_data = (row / axs.shape[0], row / axs.shape[0])
+            else:
+                y_data = (1 - top_offset, 1 - top_offset)
+            print(y_data)
+            fig.add_artist(
+                plt.Line2D(
+                    xdata=(left_offset, 1),
+                    ydata=y_data,
+                    color="black",
+                    linestyle="--",
+                    transform=fig.transFigure,
+                    figure=fig,
+                    linewidth=2,
+                )
+            )
 
-        plt.tight_layout()
+        # 在子图之间添加垂直虚线|
+        for col in range(axs.shape[1] + 1):
+            if col != 0:
+                x_data = (col / axs.shape[1], col / axs.shape[1])
+            else:
+                x_data = (left_offset, left_offset)
+            fig.add_artist(
+                plt.Line2D(
+                    xdata=x_data,
+                    ydata=(0, 1 - top_offset),
+                    color="black",
+                    linestyle="--",
+                    transform=fig.transFigure,
+                    figure=fig,
+                    linewidth=2,
+                )
+            )
+        ax = axs.flat[1]
+        # Save the legend separately
+        fig_legend = plt.figure(figsize=(10, 2))
+        handles, labels = ax.get_legend_handles_labels()
+        labels = [label for label in labels]
+        fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
+        legend_path = tsne_output_dir / f"legend.{suffix}"
+        fig_legend.savefig(legend_path)
+        plt.close(fig_legend)
+        print(tsne_output_dir)
+        plt.tight_layout(pad=1.5)
         os.makedirs(tsne_output_dir, exist_ok=True)
-        output_path = tsne_output_dir / f"tsne{mode}_combined_plots.{suffix}"  # noqa: F821
+        output_path = tsne_output_dir / f"tsne_{mode}_combined_plots.{suffix}"  # noqa: F821
         plt.savefig(output_path)
 
 
@@ -187,7 +231,7 @@ def bar(
 
     for i, (series, label) in enumerate(zip(data_0, labels)):
         ax.bar(
-            [x - (i+1)*bar_width  for x in index],
+            [x - (i + 1) * bar_width for x in index],
             series,
             bar_width,
             label=f"{label} 0",
@@ -195,12 +239,12 @@ def bar(
         )
     for i, (series, label) in enumerate(zip(data_n, labels)):
         ax.bar(
-            x=[x - (i+1+len(labels))*bar_width for x in index],
+            x=[x - (i + 1 + len(labels)) * bar_width for x in index],
             height=series,
             width=bar_width,
             label=f"{label} n-1",
             color=colors[i] if colors else None,
-            hatch = '//////'
+            hatch="//////",
         )
     ax.grid(True)
     ax.set_xticks(index)
@@ -234,12 +278,29 @@ def _combine_score(
     return result
 
 
-def translate_language_code(code):
+def translate_language_code(code: str) -> str:
     # 定义字典映射
     translation_dict = {"zh": "chinese", "en": "english"}
 
     # 获取翻译
     return translation_dict.get(code, "unknown")
+
+
+def translate_model_code(model_name: str, with_suffix=False) -> str:
+    # 定义字典映射
+    suffix = ""
+    translation_dict = {"llama": "LLAMA3.1", "glm": "GLM4", "qwen": "Qwen2"}
+    suffix_dict: dict[str, str] = {"n-1": "Previous", "0": "Original"}
+    if with_suffix:
+        model_name, suffix = model_name.split(sep=" ")
+    # 获取翻译
+    supper_model_name = translation_dict.get(model_name, "unknown")
+    supper_suffix = suffix_dict.get(suffix, "unknown")
+    return (
+        f"{supper_model_name} {supper_suffix}"
+        if with_suffix
+        else supper_model_name
+    )
 
 
 def draw_score(
@@ -256,6 +317,10 @@ def draw_score(
         fig, axs = plt.subplots(
             len(config["task_list"]),
             len(config["language_list"] * len(metric_list)),
+            # figsize=(
+            #     5 * len(config["language_list"] * len(metric_list)),
+            #     5 * len(config["task_list"]),
+            # ),
         )  # 2x2 网格的子图
         row = -1
         model_list = config["model_list"]
@@ -329,6 +394,10 @@ def draw_score(
         # Save the legend separately
         fig_legend = plt.figure(figsize=(10, 2))
         handles, labels = ax.get_legend_handles_labels()
+        labels = [
+            translate_model_code(model_name=label, with_suffix=True)
+            for label in labels
+        ]
         fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
         legend_path = chart_output_dir / "legend.eps"
         fig_legend.savefig(legend_path)
@@ -339,7 +408,9 @@ def draw_score(
             left=0.05, right=0.95, top=0.95, bottom=0.05, hspace=0, wspace=0
         )
         print(chart_output_dir)
-        output_path = chart_output_dir / f"{chart_type}_{mode}_combined_plots.eps"  # noqa: F821
+        output_path = (
+            chart_output_dir / f"{chart_type}_{mode}_combined_plots.eps"
+        )  # noqa: F821
         plt.savefig(output_path)
 
 
@@ -441,10 +512,10 @@ def main():
         encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
-    draw_score(config=config, metric_list=["cosine", "rouge1"])
+    # draw_score(config=config, metric_list=["cosine", "rouge1"])
     # draw_line(config=config, metric_name="rouge1")
     # draw_length_distribution(config=config)
-    # draw_tsne(config=config, suffix="png")
+    draw_tsne(config=config, suffix="pdf")
 
 
 if __name__ == "__main__":

@@ -21,6 +21,7 @@ wandb = "^0.18.0"
 tiktoken = "^0.7.0"
 pyecharts = "^2.0.6"
 seaborn = "^0.13.2"
+plotly = "^5.24.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"
