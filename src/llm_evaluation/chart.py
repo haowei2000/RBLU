@@ -253,14 +253,14 @@ def draw_tsne(config: dict, suffix: str = "png"):
         labels = [label for label in labels]
         fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
         legend_path = tsne_output_dir / f"legend.{suffix}"
-        fig_legend.savefig(legend_path)
+        fig_legend.savefig(legend_path,bbox_inches='tight')
         plt.close(fig_legend)
         print(tsne_output_dir)
         os.makedirs(tsne_output_dir, exist_ok=True)
         output_path = (
             tsne_output_dir / f"tsne_{mode}_{language}_plots.{suffix}"
         )  # noqa: F821
-        plt.savefig(output_path)
+        plt.savefig(output_path,bbox_inches='tight')
 
 
 def _line(
@@ -464,16 +464,6 @@ def draw_score(
                         output_path=None,
                         ax=axs[row][col],
                     )
-                    # # set the ticks: only the left and the bottom show
-                    # if row != axs.shape[0] - 1:
-                    #     ax.set_xticklabels(["", "", "", ""])
-                    # if col != 0:
-                    #     ax.set_yticklabels(["", "", "", "", "", ""])
-                    # else:
-                    #     ax.set_yticklabels(
-                    #         ["", "0.2", "0.4", "0.6", "0.8", "1.0"]
-                    #     )
-                    # set the title task title in right and language_metric title in top
                     if row == 0:
                         ax.set_title(
                             f"{metric_name.capitalize()} "
@@ -488,7 +478,6 @@ def draw_score(
                             y=0.5,
                             x=1.2,
                         )
-        fig.subplots_adjust(wspace=0,hspace=0)
         # 保存图形
         fig.supxlabel("Round")
         fig.supylabel("Score")
@@ -506,13 +495,13 @@ def draw_score(
         ]
         fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
         legend_path = chart_output_dir / f"legend.{suffix}"
-        fig_legend.savefig(legend_path)
+        fig_legend.savefig(legend_path,bbox_inches='tight')
         plt.close(fig_legend)
         print(chart_output_dir)
         output_path = (
             chart_output_dir / f"{chart_type}_{mode}_combined_plots.{suffix}"
         )  # noqa: F821
-        plt.savefig(output_path)
+        plt.savefig(output_path,bbox_inches='tight')
 
 
 def draw_length_distribution(config) -> None:
