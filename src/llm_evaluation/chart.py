@@ -14,13 +14,7 @@ from sklearn.manifold import TSNE
 import matplotlib as mpl
 
 
-def tsne(
-    texts_list,
-    vector=None,
-    colors=None,
-    ax: Axes = None,
-):
-    # Automatically find a device with available memory, prioritizing cuda:1
+def text2tsne(texts_list, languge, task, model):
     doc_count = len(texts_list[0])
     texts_flat = [item for sublist in texts_list for item in sublist]
     if torch.cuda.is_available():
@@ -38,17 +32,96 @@ def tsne(
     # t-SNE dimensionality reduction
     tsne = TSNE(n_components=3, perplexity=30, max_iter=1000)
     X_tsne = tsne.fit_transform(X)
-    if vector is None:
-        for round in range(len(texts_list)):
+    output_df = pd.DataFrame(X_tsne, columns=["x", "y", "z"])
+    output_df.to_parquet(f"{languge}_{task}_{model}.parquet", index=False)
+    return doc_count, X_tsne
+
+
+class Tsne:
+    def __init__(self, language, task, model_name, mode) -> None:
+        self.language = language
+        self.task = task
+        self.model_name = model_name
+        self.mode = mode
+        self.path = result_dir/f"{language}_{task}_{model_name}_{mode}.parquet"
+        self.doc_count = 0
+        self.round = 5
+
+    def write_and_tsne(self):
+        data_path = (
+            result_dir / f"{self.model_name}_{self.task}_{self.language}"
+        )
+        qa_dataset = datasets.load_from_disk(data_path)
+        texts_list = [
+            qa_dataset.select_columns(f"{self.mode}{round}")[
+                f"{self.mode}{round}"
+            ]
+            for round in range(5)
+        ]
+        self.doc_count = len(texts_list[0])
+        texts_flat = [item for sublist in texts_list for item in sublist]
+        if torch.cuda.is_available():
+            device = torch.device(
+                "cuda:1" if torch.cuda.device_count() > 1 else "cuda:0"
+            )
+        else:
+            device = torch.device("cpu")
+        print(f"device is {device}")
+        model = SentenceTransformer(
+            "all-MiniLM-L6-v2",
+            device=device,
+        )
+        X = model.encode(texts_flat, normalize_embeddings=True, batch_size=50)
+        # t-SNE dimensionality reduction
+        tsne = TSNE(n_components=3, perplexity=30, max_iter=1000)
+        X_tsne = tsne.fit_transform(X)
+        output_df = pd.DataFrame(X_tsne, columns=["x", "y", "z"])
+        output_df.to_parquet(self.path, index=False)
+        return self.doc_count, X_tsne
+
+    def read(self):
+        if self.path.exists() is False:
+            self.write_and_tsne()
+        else:
+            data_path = (
+                result_dir / f"{self.model_name}_{self.task}_{self.language}"
+            )
+            qa_dataset = datasets.load_from_disk(data_path)
+            texts_list = [
+                qa_dataset.select_columns(f"{self.mode}{round}")[
+                    f"{self.mode}{round}"
+                ]
+                for round in range(5)
+            ]
+            self.doc_count = len(texts_list[0])
+        return pd.read_parquet(self.path)
+
+
+def _scatter_3D(
+    round: int,
+    doc_count: int,
+    vector=None,
+    colors=None,
+    ax: Axes = None,
+):
+    # Automatically find a device with available memory, prioritizing cuda:1
+    if vector is not None:
+        for round in range(round):
             if colors:
                 ax.scatter(
-                    xs=X_tsne[round * doc_count : (round + 1) * doc_count, 0],
-                    ys=X_tsne[round * doc_count : (round + 1) * doc_count, 1],
-                    zs=X_tsne[round * doc_count : (round + 1) * doc_count, 2],
+                    xs=vector["x"][
+                        round * doc_count : (round + 1) * doc_count
+                    ],
+                    ys=vector["y"][
+                        round * doc_count : (round + 1) * doc_count
+                    ],
+                    zs=vector["z"][
+                        round * doc_count : (round + 1) * doc_count
+                    ],
                     c=colors[round],
                     s=5,
                     label=f"Round {round}",
-                    alpha=0.7 - round * 0.1,  # Set transparency
+                    alpha=1 - round * 0.1,  # Set transparency
                 )
             else:
                 raise NotImplementedError
@@ -60,7 +133,7 @@ def tsne(
     return ax
 
 
-def draw_tsne(config: dict, suffix: str = "eps"):
+def draw_tsne(config: dict, suffix: str = "png"):
     fig, axs = plt.subplots(
         len(config["task_list"]) * len(config["language_list"]),
         len(config["model_list"]),
@@ -69,6 +142,7 @@ def draw_tsne(config: dict, suffix: str = "eps"):
             5 * len(config["task_list"]) * len(config["language_list"]),
         ),
         subplot_kw={"projection": "3d"},
+        constrained_layout=True,
     )
     plt.rcParams.update(
         {
@@ -79,10 +153,10 @@ def draw_tsne(config: dict, suffix: str = "eps"):
             "legend.fontsize": 12,  # Set legend font size
         }
     )
-    model_list = config["model_list"]
-    language_list = config["language_list"]
-    task_list = config["task_list"]
-    for mode in ["q"]:
+    model_list = list(config["model_list"])
+    language_list = list(config["language_list"])
+    task_list = list(config["task_list"])
+    for mode in ["q", "a"]:
         row, col = -1, -1
         for model_name in model_list:
             col = col + 1
@@ -90,35 +164,60 @@ def draw_tsne(config: dict, suffix: str = "eps"):
             for language in language_list:
                 for task in task_list:
                     row = row + 1
-                    data_path = result_dir / f"{model_name}_{task}_{language}"
-                    qa_dataset = datasets.load_from_disk(data_path)
-                    all_text = [
-                        qa_dataset.select_columns(f"{mode}{round}")[
-                            f"{mode}{round}"
-                        ]
-                        for round in range(5)
-                    ]
-                    ax = tsne(
-                        texts_list=all_text,
+                    tsne_data = Tsne(
+                        language=language,
+                        task=task,
+                        model_name=model_name,
+                        mode=mode,
+                    )
+                    vector = tsne_data.read()
+                    ax = _scatter_3D(
+                        round=tsne_data.round,
+                        doc_count=tsne_data.doc_count,
+                        vector=vector,
                         ax=axs[row][col],
                         colors=config["color_family"],
                     )
-                    ax.tick_params(axis="x", pad=0)  # x轴标签距离
-                    ax.tick_params(axis="y", pad=0)  # y轴标签距离
-                    ax.tick_params(axis="z", pad=0)  # y轴标签距离
-        left_offset = 0
-        top_offset = 0
+                    ax.tick_params(axis="x", pad=0)
+                    ax.tick_params(axis="y", pad=0)
+                    ax.tick_params(axis="z", pad=-20)
+                    if row == 0:
+                        ax.text2D(
+                            x=0.5,
+                            y=1.05,
+                            s=f"{_translate_model(model_name=model_name)}",
+                            transform=ax.transAxes,
+                            fontsize=18,
+                            va="center",
+                            ha="center",
+                        )
+                    if col == axs.shape[1] - 1:
+                        ax.text2D(
+                            s=f"{task.capitalize()}-{_translate_language(language).capitalize()}",
+                            x=1.1,
+                            y=0.5,
+                            rotation=90,
+                            transform=ax.transAxes,
+                            fontsize=18,
+                            va="center",
+                            ha="center",
+                        )
         tsne_output_dir = chart_dir / "tsne"
+        top_offset = 0.06 / axs.shape[1]
+        right_offset = 0.08 / axs.shape[0]
         # 在子图之间添加水平虚线——
         for row in range(0, axs.shape[0] + 1):
-            if row != axs.shape[0]:
-                y_data = (row / axs.shape[0], row / axs.shape[0])
+            if row != 0:
+                y_data = (
+                    row / axs.shape[0] - top_offset,
+                    row / axs.shape[0] - top_offset,
+                )
             else:
-                y_data = (1 - top_offset, 1 - top_offset)
+                y_data = (0, 0)
             print(y_data)
             fig.add_artist(
                 plt.Line2D(
-                    xdata=(left_offset, 1),
+                    xdata=(0, 1 - right_offset),
                     ydata=y_data,
                     color="black",
                     linestyle="--",
@@ -127,13 +226,15 @@ def draw_tsne(config: dict, suffix: str = "eps"):
                     linewidth=2,
                 )
             )
-
         # 在子图之间添加垂直虚线|
         for col in range(axs.shape[1] + 1):
             if col != 0:
-                x_data = (col / axs.shape[1], col / axs.shape[1])
+                x_data = (
+                    col / axs.shape[1] - right_offset,
+                    col / axs.shape[1] - right_offset,
+                )
             else:
-                x_data = (left_offset, left_offset)
+                x_data = (0, 0)
             fig.add_artist(
                 plt.Line2D(
                     xdata=x_data,
@@ -147,7 +248,7 @@ def draw_tsne(config: dict, suffix: str = "eps"):
             )
         ax = axs.flat[1]
         # Save the legend separately
-        fig_legend = plt.figure(figsize=(10, 2))
+        fig_legend = plt.figure(figsize=(10, 0.5), constrained_layout=True)
         handles, labels = ax.get_legend_handles_labels()
         labels = [label for label in labels]
         fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
@@ -155,13 +256,14 @@ def draw_tsne(config: dict, suffix: str = "eps"):
         fig_legend.savefig(legend_path)
         plt.close(fig_legend)
         print(tsne_output_dir)
-        plt.tight_layout(pad=1.5)
         os.makedirs(tsne_output_dir, exist_ok=True)
-        output_path = tsne_output_dir / f"tsne_{mode}_combined_plots.{suffix}"  # noqa: F821
+        output_path = (
+            tsne_output_dir / f"tsne_{mode}_{language}_plots.{suffix}"
+        )  # noqa: F821
         plt.savefig(output_path)
 
 
-def line(
+def _line(
     data_0,
     data_n,
     labels,
@@ -202,13 +304,15 @@ def line(
     # plt.legend()
     # Save the plot to a file
     ax.set_xticks([1, 2, 3, 4])
-    ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+    ax.set_yticks(
+        [0, 0.2, 0.4, 0.6, 0.8, 1.0],
+    )
     if output_path is not None:
         plt.savefig(output_path)
     return ax
 
 
-def bar(
+def _bar(
     data_0,
     data_n,
     labels,
@@ -248,7 +352,9 @@ def bar(
         )
     ax.grid(True)
     ax.set_xticks(index)
-    ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+    ax.set_yticks(
+        [0, 0.2, 0.4, 0.6, 0.8, 1.0],
+    )
     if output_path is not None:
         plt.savefig(output_path)
     return ax
@@ -278,7 +384,7 @@ def _combine_score(
     return result
 
 
-def translate_language_code(code: str) -> str:
+def _translate_language(code: str) -> str:
     # 定义字典映射
     translation_dict = {"zh": "chinese", "en": "english"}
 
@@ -286,19 +392,19 @@ def translate_language_code(code: str) -> str:
     return translation_dict.get(code, "unknown")
 
 
-def translate_model_code(model_name: str, with_suffix=False) -> str:
+def _translate_model(model_name: str, with_refer=False) -> str:
     # 定义字典映射
     suffix = ""
     translation_dict = {"llama": "LLAMA3.1", "glm": "GLM4", "qwen": "Qwen2"}
     suffix_dict: dict[str, str] = {"n-1": "Previous", "0": "Original"}
-    if with_suffix:
+    if with_refer:
         model_name, suffix = model_name.split(sep=" ")
     # 获取翻译
     supper_model_name = translation_dict.get(model_name, "unknown")
     supper_suffix = suffix_dict.get(suffix, "unknown")
     return (
-        f"{supper_model_name} {supper_suffix}"
-        if with_suffix
+        f"{supper_model_name}-{supper_suffix}"
+        if with_refer
         else supper_model_name
     )
 
@@ -308,6 +414,7 @@ def draw_score(
     metric_list=None,
     output_dir: str | Path = None,
     chart_type: str = "bar",
+    suffix="png",
 ):
     plt.rcParams["figure.figsize"] = [
         8.27 * 0.75,
@@ -317,6 +424,9 @@ def draw_score(
         fig, axs = plt.subplots(
             len(config["task_list"]),
             len(config["language_list"] * len(metric_list)),
+            sharex=True,
+            sharey=True,
+            constrained_layout=True,
             # figsize=(
             #     5 * len(config["language_list"] * len(metric_list)),
             #     5 * len(config["task_list"]),
@@ -346,7 +456,7 @@ def draw_score(
                             for model_scores in scores
                         ]
                         data[refer] = scores
-                    ax = bar(
+                    ax = _bar(
                         data_0=data["0"],
                         data_n=data["n-1"],
                         labels=model_list,
@@ -354,20 +464,20 @@ def draw_score(
                         output_path=None,
                         ax=axs[row][col],
                     )
-                    # set the ticks: only the left and the bottom show
-                    if row != axs.shape[0] - 1:
-                        ax.set_xticklabels(["", "", "", ""])
-                    if col != 0:
-                        ax.set_yticklabels(["", "", "", "", "", ""])
-                    else:
-                        ax.set_yticklabels(
-                            ["", "0.2", "0.4", "0.6", "0.8", "1.0"]
-                        )
+                    # # set the ticks: only the left and the bottom show
+                    # if row != axs.shape[0] - 1:
+                    #     ax.set_xticklabels(["", "", "", ""])
+                    # if col != 0:
+                    #     ax.set_yticklabels(["", "", "", "", "", ""])
+                    # else:
+                    #     ax.set_yticklabels(
+                    #         ["", "0.2", "0.4", "0.6", "0.8", "1.0"]
+                    #     )
                     # set the title task title in right and language_metric title in top
                     if row == 0:
                         ax.set_title(
                             f"{metric_name.capitalize()} "
-                            f"{translate_language_code(language).capitalize()}",
+                            f"{_translate_language(language).capitalize()}",
                             loc="center",
                         )
                     if col == axs.shape[1] - 1:
@@ -376,40 +486,31 @@ def draw_score(
                             loc="right",
                             rotation=90,
                             y=0.5,
-                            x=1.15,
+                            x=1.2,
                         )
-                    # set the label name
-                    if col == 0 and row == 0:
-                        ax.set_ylabel("Score", loc="top")
-                    if col == axs.shape[1] - 1 and row == axs.shape[0] - 1:
-                        ax.set_xlabel("Round", loc="right")
-                    ax.xaxis.set_label_coords(1.2, -0.1)
-                    ax.yaxis.set_label_coords(-0.1, 0.96)
+        fig.subplots_adjust(wspace=0,hspace=0)
         # 保存图形
+        fig.supxlabel("Round")
+        fig.supylabel("Score")
         if output_dir is None:
             chart_output_dir = chart_dir / chart_type
         os.makedirs(chart_output_dir, exist_ok=True)
         # output legend
         ax = axs.flat[0]
         # Save the legend separately
-        fig_legend = plt.figure(figsize=(10, 2))
+        fig_legend = plt.figure(figsize=(10, 2), constrained_layout=True)
         handles, labels = ax.get_legend_handles_labels()
         labels = [
-            translate_model_code(model_name=label, with_suffix=True)
+            _translate_model(model_name=label, with_refer=True)
             for label in labels
         ]
         fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
-        legend_path = chart_output_dir / "legend.eps"
+        legend_path = chart_output_dir / f"legend.{suffix}"
         fig_legend.savefig(legend_path)
         plt.close(fig_legend)
-
-        plt.tight_layout()
-        plt.subplots_adjust(
-            left=0.05, right=0.95, top=0.95, bottom=0.05, hspace=0, wspace=0
-        )
         print(chart_output_dir)
         output_path = (
-            chart_output_dir / f"{chart_type}_{mode}_combined_plots.eps"
+            chart_output_dir / f"{chart_type}_{mode}_combined_plots.{suffix}"
         )  # noqa: F821
         plt.savefig(output_path)
 
@@ -512,10 +613,9 @@ def main():
         encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
-    # draw_score(config=config, metric_list=["cosine", "rouge1"])
-    # draw_line(config=config, metric_name="rouge1")
+    draw_score(config=config, metric_list=["cosine", "rouge1"],suffix='eps')
     # draw_length_distribution(config=config)
-    draw_tsne(config=config, suffix="pdf")
+    # draw_tsne(config=config, suffix="eps")
 
 
 if __name__ == "__main__":

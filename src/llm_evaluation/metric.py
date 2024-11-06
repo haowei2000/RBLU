@@ -11,7 +11,7 @@ from sentence_transformers import SentenceTransformer
 from typing import List, Dict
 import torch
 import pandas as pd
-from llm_evaluation.chart import line
+from llm_evaluation.chart import _line
 
 
 def bert_score(

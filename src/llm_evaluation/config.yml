@@ -4,8 +4,8 @@ force_regenerate: False
 
 language: zh
 language_list:
-- en
 - zh
+- en
 task: legal
 task_list:
 - medical
