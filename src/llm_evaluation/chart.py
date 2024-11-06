@@ -602,9 +602,9 @@ def main():
         encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
-    draw_score(config=config, metric_list=["cosine", "rouge1"],suffix='eps')
+    # draw_score(config=config, metric_list=["cosine", "rouge1"],suffix='eps')
     # draw_length_distribution(config=config)
-    # draw_tsne(config=config, suffix="eps")
+    draw_tsne(config=config, suffix="eps")
 
 
 if __name__ == "__main__":
