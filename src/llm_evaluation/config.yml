@@ -4,8 +4,8 @@ force_regenerate: False
 
 language: zh
 language_list:
-# - zh
-- en
+- zh
+# - en
 task: legal
 task_list:
 - medical
@@ -50,8 +50,8 @@ color_family:
 - '#E465B0'
 
 color_family2:
-- '#DCEDC1'
-- '#FFD460'
-- '#F07B3F'
-- '#EA5455'
-- '#2D4059'
+- '#FBECB2'
+- '#F8BDEB'
+- '#5272F2'
+- '#7ED7C1'
+- '#072541'
