@@ -156,7 +156,7 @@ def draw_tsne(config: dict, suffix: str = "png"):
     model_list = list(config["model_list"])
     language_list = list(config["language_list"])
     task_list = list(config["task_list"])
-    for mode in ["q", "a"]:
+    for mode in ["q"]:
         row, col = -1, -1
         for model_name in model_list:
             col = col + 1
@@ -176,7 +176,7 @@ def draw_tsne(config: dict, suffix: str = "png"):
                         doc_count=tsne_data.doc_count,
                         vector=vector,
                         ax=axs[row][col],
-                        colors=config["color_family"],
+                        colors=config["color_family2"],
                     )
                     ax.tick_params(axis="x", pad=0)
                     ax.tick_params(axis="y", pad=0)
