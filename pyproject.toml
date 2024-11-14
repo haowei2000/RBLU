@@ -1,7 +1,7 @@
 [tool.poetry]
 authors = ["Wang Haowei <hw_wang@whu.edu.cn>"]
 description = ""
-name = "llm-evaluation"
+name = "rblu"
 readme = "README.md"
 version = "0.1.0"
 
