@@ -27,3 +27,4 @@ zsh
 .mypy_cache
 .idea
 dist
+Latex
