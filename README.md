@@ -7,12 +7,13 @@ large language models
 
 <!-- PROJECT SHIELDS -->
 
-[![Contributors][contributors-shield]][contributors-url]
+<!-- [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
+[![LinkedIn][linkedin-shield]][linkedin-url] -->
+
 
 <!-- PROJECT LOGO -->
 <br />
@@ -163,8 +164,38 @@ We tested three open source models, [LLAMA3.1-8BInstruct](https://github.com/fac
 |              |              | LLAMA3.1       | 0.0540     | 0.0111     | 0.0552     | 0.0542        | 0.5390         |
 |              |              | Qwen2          | 0.0843     | 0.0195     | **0.0841** | 0.0843        | **0.6198**     |
 
+### Similarity Scores in Multi-rounds
+
+The right side indicates 3 domains, and the top side indicates 2 score types and 2 languages. "Cosine" represents "BERT-Score", the cosine similarity of vectorized answer texts, while "Rouge1" is the corresponding Rouge-1 score. The datasets are in English and Chinese. In the legend, "Original" indicates $\text{Score}_{\text{Original}}$, and "Previous" indicates $\text{Score}_{\text{Previous}}$. The x-axis of each subplot shows the number of rounds (1–4), and the y-axis shows similarity scores (0.0–1.0).
+
+<p align="center">
+  <img src="src/chart/line/legend.png" alt="Legend" width="80%" />
+</p>
+<p align="center">
+  <img src="src/chart/line/line_q_combined_plots.png" alt="Questions" width="45%" />
+  <img src="src/chart/line/line_a_combined_plots.png" alt="Answers" width="45%" />
+</p>
+<p align="center">
+  <span style="margin-right: 20%;">Questions</span>
+  <span>Answers</span>
 </p>
 
+
+### Some insights
+
+</p>
+
+- **GLM4 Performance**: GLM4 demonstrates the strongest reverse inference performance among the models tested.
+  
+- **Semantic vs. Syntactic**: LLMs generally capture semantic meaning more effectively than syntactic structure.
+
+- **Cognitive Inertia**: LLMs exhibit cognitive inertia, as they tend to generate increasingly similar questions over multiple rounds.
+
+- **Forward vs. Reverse Inference**: LLMs show stronger forward inference capabilities than reverse inference.
+
+- **Language Differences**:
+  - **Chinese**: Due to the flexibility of expressions and varied word choices in Chinese, the outputs display greater semantic flexibility.
+  - **English**: English outputs maintain higher syntactic consistency due to the stricter syntactic rules in the language.
 
 
 ## Author

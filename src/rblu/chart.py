@@ -50,7 +50,9 @@ class Tsne:
         self.task = task
         self.model_name = model_name
         self.mode = mode
-        self.path = result_dir/f"{language}_{task}_{model_name}_{mode}.parquet"
+        self.path = (
+            result_dir / f"{language}_{task}_{model_name}_{mode}.parquet"
+        )
         self.doc_count = 0
         self.round = 5
 
@@ -259,13 +261,13 @@ def draw_tsne(config: dict, suffix: str = "png"):
         labels = [label for label in labels]
         fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
         legend_path = tsne_output_dir / f"legend.{suffix}"
-        fig_legend.savefig(legend_path,bbox_inches='tight')
+        fig_legend.savefig(legend_path, bbox_inches="tight")
         plt.close(fig_legend)
         os.makedirs(tsne_output_dir, exist_ok=True)
         output_path = (
             tsne_output_dir / f"tsne_{mode}_{language}_plots.{suffix}"
         )  # noqa: F821
-        plt.savefig(output_path,bbox_inches='tight')
+        plt.savefig(output_path, bbox_inches="tight")
         logging.info(f"Saved the chart to {output_path}")
 
 
@@ -462,14 +464,26 @@ def draw_score(
                             for model_scores in scores
                         ]
                         data[refer] = scores
-                    ax = _bar(
-                        data_0=data["0"],
-                        data_n=data["n-1"],
-                        labels=model_list,
-                        colors=config["color_family"],
-                        output_path=None,
-                        ax=axs[row][col],
-                    )
+                    if chart_type == "bar":
+                        ax = _bar(
+                            data_0=data["0"],
+                            data_n=data["n-1"],
+                            labels=model_list,
+                            colors=config["color_family"],
+                            output_path=None,
+                            ax=axs[row][col],
+                        )
+                    elif chart_type == "line":
+                        ax = _line(
+                            data_0=data["0"],
+                            data_n=data["n-1"],
+                            labels=model_list,
+                            colors=config["color_family"],
+                            output_path=None,
+                            ax=axs[row][col],
+                        )
+                    else:
+                        raise NotImplementedError
                     if row == 0:
                         ax.set_title(
                             f"{metric_name.capitalize()} "
@@ -501,12 +515,12 @@ def draw_score(
         ]
         fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
         legend_path = chart_output_dir / f"legend.{suffix}"
-        fig_legend.savefig(legend_path,bbox_inches='tight')
+        fig_legend.savefig(legend_path, bbox_inches="tight")
         plt.close(fig_legend)
         output_path = (
             chart_output_dir / f"{chart_type}_{mode}_combined_plots.{suffix}"
         )  # noqa: F821
-        plt.savefig(output_path,bbox_inches='tight')
+        plt.savefig(output_path, bbox_inches="tight")
         logging.info(f"Saved the chart to {output_path}")
 
 
@@ -553,7 +567,9 @@ def draw_length_distribution(config) -> None:
             avg_length = filtered_data[filtered_data["Category"] == task][
                 "Text Length"
             ].mean()
-            logging.info(f"Average length for {task} ({lang}): {avg_length:.2f}")
+            logging.info(
+                f"Average length for {task} ({lang}): {avg_length:.2f}"
+            )
         # 设置图像
         plt.figure(figsize=(8, 6))
 
@@ -595,7 +611,9 @@ def main():
     parser = argparse.ArgumentParser(description="A argparse script.")
     parser.add_argument("--suffix", type=str, help="Suffix to be used")
     args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
     mpl.rcParams["figure.figsize"] = [
         8.27 * 0.75,
         11.69 * 0.75,
@@ -603,12 +621,20 @@ def main():
     mpl.rc("font", family="Times New Roman")
     current_dir = Path(__file__).parent
     with open(
-        file=current_dir / 'config.yml',
+        file=current_dir / "config.yml",
         mode="r",
         encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
-    draw_score(config=config, metric_list=["cosine", "rouge1"], suffix=args.suffix)
+    draw_score(
+        config=config, metric_list=["cosine", "rouge1"], suffix=args.suffix
+    )
+    draw_score(
+        config=config,
+        metric_list=["cosine", "rouge1"],
+        suffix=args.suffix,
+        chart_type="line",
+    )
     draw_length_distribution(config=config)
     draw_tsne(config=config, suffix=args.suffix)
 
