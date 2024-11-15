@@ -2,10 +2,12 @@ wandb: False # use wandb to log the results
 force_regenerate: False
 # forced to regenerate the data even if the result file exists
 
+
+# the language and task for the data generation. please make sure to provide the correct dataset
 language: zh
 language_list:
 - zh
-# - en
+- en
 task: legal
 task_list:
 - medical

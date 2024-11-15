@@ -1,17 +1,24 @@
+"""
+The module is used to draw the chart for the evaluation result
+"""
+
+import argparse
 import os
+import logging
 from pathlib import Path
 
 import datasets
-from matplotlib.axes import Axes
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import yaml
-from data_load import load_qa
-from path import chart_dir, project_dir, result_dir, score_dir
+from matplotlib.axes import Axes
 from sentence_transformers import SentenceTransformer
 from sklearn.manifold import TSNE
-import matplotlib as mpl
+
+from rblu.data_load import load_qa
+from rblu.path import chart_dir, project_dir, result_dir, score_dir
 
 
 def text2tsne(texts_list, languge, task, model):
@@ -66,7 +73,7 @@ class Tsne:
             )
         else:
             device = torch.device("cpu")
-        print(f"device is {device}")
+        logging.info(f"device is {device}")
         model = SentenceTransformer(
             "all-MiniLM-L6-v2",
             device=device,
@@ -214,7 +221,6 @@ def draw_tsne(config: dict, suffix: str = "png"):
                 )
             else:
                 y_data = (0, 0)
-            print(y_data)
             fig.add_artist(
                 plt.Line2D(
                     xdata=(0, 1 - right_offset),
@@ -255,12 +261,12 @@ def draw_tsne(config: dict, suffix: str = "png"):
         legend_path = tsne_output_dir / f"legend.{suffix}"
         fig_legend.savefig(legend_path,bbox_inches='tight')
         plt.close(fig_legend)
-        print(tsne_output_dir)
         os.makedirs(tsne_output_dir, exist_ok=True)
         output_path = (
             tsne_output_dir / f"tsne_{mode}_{language}_plots.{suffix}"
         )  # noqa: F821
         plt.savefig(output_path,bbox_inches='tight')
+        logging.info(f"Saved the chart to {output_path}")
 
 
 def _line(
@@ -497,11 +503,11 @@ def draw_score(
         legend_path = chart_output_dir / f"legend.{suffix}"
         fig_legend.savefig(legend_path,bbox_inches='tight')
         plt.close(fig_legend)
-        print(chart_output_dir)
         output_path = (
             chart_output_dir / f"{chart_type}_{mode}_combined_plots.{suffix}"
         )  # noqa: F821
         plt.savefig(output_path,bbox_inches='tight')
+        logging.info(f"Saved the chart to {output_path}")
 
 
 def draw_length_distribution(config) -> None:
@@ -547,7 +553,7 @@ def draw_length_distribution(config) -> None:
             avg_length = filtered_data[filtered_data["Category"] == task][
                 "Text Length"
             ].mean()
-            print(f"Average length for {task} ({lang}): {avg_length:.2f}")
+            logging.info(f"Average length for {task} ({lang}): {avg_length:.2f}")
         # 设置图像
         plt.figure(figsize=(8, 6))
 
@@ -581,30 +587,30 @@ def draw_length_distribution(config) -> None:
         )
         output_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output_path)
+        logging.info(f"Saved the chart to {output_path}")
         plt.close()
 
 
 def main():
+    parser = argparse.ArgumentParser(description="A argparse script.")
+    parser.add_argument("--suffix", type=str, help="Suffix to be used")
+    args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
     mpl.rcParams["figure.figsize"] = [
         8.27 * 0.75,
         11.69 * 0.75,
-    ]  # A4 size is 8.27 x 11.69 inches
-    # mpl.rcParams["font.size"] = 12  # 设置默认字体大小
-    # mpl.rcParams["axes.titlesize"] = 12  # 设置标题字体大小
-    # mpl.rcParams["axes.labelsize"] = 12  # 设置轴标签字体大小
-    # mpl.rcParams["xtick.labelsize"] = 12  # 设置 x 轴刻度标签字体大小
-    # mpl.rcParams["ytick.labelsize"] = 12
+    ]
     mpl.rc("font", family="Times New Roman")
     current_dir = Path(__file__).parent
     with open(
-        file=current_dir / "config.yml",
+        file=current_dir / 'config.yml',
         mode="r",
         encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
-    # draw_score(config=config, metric_list=["cosine", "rouge1"],suffix='eps')
-    # draw_length_distribution(config=config)
-    draw_tsne(config=config, suffix="eps")
+    draw_score(config=config, metric_list=["cosine", "rouge1"], suffix=args.suffix)
+    draw_length_distribution(config=config)
+    draw_tsne(config=config, suffix=args.suffix)
 
 
 if __name__ == "__main__":

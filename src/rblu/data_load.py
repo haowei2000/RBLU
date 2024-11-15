@@ -1,18 +1,17 @@
 """
 a script to load data from different sources and save it to csv
-folder path is ./data
+folder path is src/rblu/data
 """
 
 from pathlib import Path
 from typing import Any, List
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
-import seaborn as sns
 import yaml
 from datasets import Dataset, load_dataset
-from path import chart_dir, data_dir
+
+from rblu.path import chart_dir, data_dir
 
 
 def rename_all_columns(
@@ -145,6 +144,7 @@ def load_qa(
     filename = data_dir / f"{lang}_{task_name}.json"
 
     if from_remote:
+
         dataset = load_dataset_from_remote(lang, task_name)
     else:
         dataset = load_dataset(

@@ -1,17 +1,14 @@
 """
-This example starts multiple processes (1 per GPU), which encode
-sentences in parallel. This gives a near linear speed-up
-when encoding large text collections.
+This module contains the functions to compute the Rouge and BERT scores
+for the results of the LLM evaluation process.
 """
+
+from typing import Dict, List
 
 import evaluate
 import jieba
-from rouge_chinese import Rouge
-from sentence_transformers import SentenceTransformer
-from typing import List, Dict
 import torch
-import pandas as pd
-from llm_evaluation.chart import _line
+from sentence_transformers import SentenceTransformer
 
 
 def bert_score(

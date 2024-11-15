@@ -47,7 +47,7 @@ large language models
   - [Installation](#Installation)
 - [Project Tree](#Project-Tree)
 - [Usage](#Usage)
-- [Roadmap](#部署)
+- [Roadmap](#Roadmap)
 - [Author](#Author)
 - [Acknowledgments](#Acknowledgments)
 
@@ -114,21 +114,67 @@ RBLU
 │  ├── /score/
 │  ├── /rblu/
 │  │  ├── config.yaml
-│  │  └── frontend.txt
+│  │  └── main.py
+│  │  └── dataload.py
+│  │  └── evaluation.py
+│  │  └── metric.py
+│  │  └── process.py
+│  │  └── path.py
+│  │  └── proxy.py
 └── /tests/
 
 ```
 
+## Usage
+You can find the result for our paper in [result](https://github.com/534602988/llm_evaluation/blob/main/src/result), [score](https://github.com/534602988/llm_evaluation/blob/main/src/score), [chart](https://github.com/534602988/llm_evaluation/blob/main/src/chart).
+You can re-run the project by the following command：
+```sh
+poetry run eval
+```
+Or re-draw the chart by:
+```sh
+poetry run draw --suffix png
+```
+
+## Roadmap
+
+We tested three open source models, [LLAMA3.1-8BInstruct](https://github.com/facebookresearch/llama), [GLM4-9B-Chat](https://github.com/THUDM/GLM), and [Qwen2-7B-Instruct](https://github.com/QwenLM/Qwen) on the RBLU benchmark with [ROUGE](https://arxiv.org/abs/2010.12495) and [BERT-Score](https://openreview.net/forum?id=SkeHuCVFDr), the results are as follows:
+
+<p align="center">
+
+| **Language** | **Domain**   | **Model Name** | **Rouge1** | **Rouge2** | **RougeL** | **RougeLsum** | **BERT score** |
+|--------------|--------------|----------------|------------|------------|------------|---------------|----------------|
+| **English**  | Financial    | GLM4           | **0.1322** | **0.0251** | **0.0929** | **0.1047**    | 0.5161         |
+|              |              | LLAMA3.1       | 0.1200     | 0.0212     | 0.0817     | 0.0970        | 0.4632         |
+|              |              | Qwen2          | 0.1260     | 0.0217     | 0.0878     | 0.1005        | **0.5181**     |
+|              | Legal        | GLM4           | **0.1409** | **0.0320** | **0.0930** | **0.1052**    | **0.5194**     |
+|              |              | LLAMA3.1       | 0.1271     | 0.0258     | 0.0827     | 0.0978        | 0.4686         |
+|              |              | Qwen2          | 0.1255     | 0.0203     | 0.0814     | 0.0964        | 0.4792         |
+|              | Medical      | GLM4           | **0.2115** | 0.0718     | **0.1588** | **0.1600**    | **0.5799**     |
+|              |              | LLAMA3.1       | 0.1865     | 0.0652     | 0.1428     | 0.1452        | 0.5512         |
+|              |              | Qwen2          | 0.1962     | **0.0740** | 0.1509     | 0.1509        | 0.5600         |
+| **Chinese**  | Financial    | GLM4           | **0.2131** | **0.0604** | **0.2120** | **0.2121**    | **0.7878**     |
+|              |              | LLAMA3.1       | 0.1566     | 0.0482     | 0.1555     | 0.1551        | 0.7386         |
+|              |              | Qwen2          | 0.1210     | 0.0295     | 0.1218     | 0.1215        | 0.7398         |
+|              | Legal        | GLM4           | **0.0587** | **0.0108** | **0.0587** | **0.0584**    | **0.7090**     |
+|              |              | LLAMA3.1       | 0.0355     | 0.0109     | 0.0349     | 0.0364        | 0.6527         |
+|              |              | Qwen2          | 0.0605     | 0.0088     | 0.0612     | 0.0615        | 0.6957         |
+|              | Medical      | GLM4           | **0.0893** | **0.0214** | 0.0880     | **0.0890**    | 0.5723         |
+|              |              | LLAMA3.1       | 0.0540     | 0.0111     | 0.0552     | 0.0542        | 0.5390         |
+|              |              | Qwen2          | 0.0843     | 0.0195     | **0.0841** | 0.0843        | **0.6198**     |
+
+</p>
+
+
 
 ## Author
 
-wanghw00@gmail.com 
+[Haowei Wang](mailto:wanghw00@gmail.com)
 
- *您也可以在贡献者名单中参看所有参与该项目的开发者。*
+[AlexLiu](https://github.com/MAXIMUM950814)
 
 ## License
-
-该项目签署了MIT 授权许可，详情请参阅 [LICENSE.txt](https://github.com/haowei2000/RBLU/blob/master/LICENSE.txt)
+This project is licensed under the MIT License. For more details, please refer to [LICENSE.txt](https://github.com/haowei2000/RBLU/blob/master/LICENSE.txt)
 
 ## Acknowledgments
 

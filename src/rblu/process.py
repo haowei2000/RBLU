@@ -1,7 +1,8 @@
 """the default process"""
 
-from typing import Callable, Dict
 from dataclasses import dataclass
+from typing import Callable, Dict
+
 
 def extract_question(example: Dict, loop: int, split_text: str) -> Dict:
     answer = example[f"a{loop}"]

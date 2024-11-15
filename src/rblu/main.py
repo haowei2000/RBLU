@@ -1,6 +1,8 @@
 """a evaluation module for LLAMA3.1 evaluation"""
 
+import logging
 import os
+from pathlib import Path
 
 import datasets
 import torch
@@ -9,13 +11,14 @@ from accelerate.utils import write_basic_config
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 import wandb
-from llm_evaluation.data_load import load_qa
-from llm_evaluation.evaluation import MyGenerator, evaluate, save_score
-from llm_evaluation.metric import rouge_and_bert
-from llm_evaluation.process import (Process, apply_default_template,
-                                    apply_default_zh_template, get_process)
-from llm_evaluation.proxy import close_proxy, set_proxy
-from path import result_dir,score_dir
+from rblu.data_load import load_qa
+from rblu.evaluation import MyGenerator, evaluate, save_score
+from rblu.metric import rouge_and_bert
+from rblu.path import result_dir, score_dir
+from rblu.process import (Process, apply_default_template,
+                          apply_default_zh_template, get_process)
+from rblu.proxy import close_proxy, set_proxy
+
 
 def create_generator(config):
     """
@@ -73,7 +76,7 @@ def create_generator(config):
 def evaluate_task(config, task, process):
     model_name = config["model"]["model_name"]
     language = config["language"]
-    print(f"{model_name}:{task}:{language}")
+    logging.info(f"Start evaluating, {model_name}:{task}:{language}")
 
     original_questions, _ = load_qa(
         lang=language,
@@ -81,14 +84,15 @@ def evaluate_task(config, task, process):
         count=config["data"]["doc_count"],
         min_length=config["data"]["min_length"],
         max_length=config["data"]["max_length"],
-        from_remote=True,
     )
 
-    output_path = result_dir/ f"{model_name}_{task}_{language}"
-
+    output_path = result_dir / f"{model_name}_{task}_{language}"
 
     if os.path.exists(output_path) and not config["force_regenerate"]:
-        print(f"Loading dataset from {output_path}")
+        logging.info(
+            f"The result already exists in {output_path}"
+            f'if you want to regenerate, please set "force_regenerate" to True'
+        )
         qa_dataset = datasets.load_from_disk(output_path)
     else:
         generator = create_generator(config=config)
@@ -111,9 +115,9 @@ def evaluate_task(config, task, process):
         model_name=model_name,
         task=task,
         language=language,
-        path=score_dir/ f"{model_name}_{task}_{language}_scores.csv"
-        )
-    print(score)
+        path=score_dir / f"{model_name}_{task}_{language}_scores.csv",
+    )
+    return score
 
 
 def main():
@@ -138,22 +142,26 @@ def main():
         - If 'wandb' is not enabled in the configuration, it runs in dryrun
           mode.
     """
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
     set_proxy()
+    logging.info("Proxy set up")
     # set the basic accelerate environment on mutil-gpu
     write_basic_config(mixed_precision="fp16")
     with open(
-        "config.yml",
+        Path(__file__).parent / "config.yml",
         "r",
         encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)
     if config["wandb"]:
+        logging.info("Wandb enabled and please make sure that the wandb api key is set up")
         wandb.init(
             project="llm-evaluation",
             config=config,
             tags=[config["model"]["model_name"]],
         )
     else:
+        logging.info("Wandb is disabled")
         os.environ["WANDB_MODE"] = "dryrun"
         wandb.init(mode="disabled")
     process = get_process(config["language"])
@@ -163,7 +171,6 @@ def main():
         # torch.cuda.ipc_collect()
     wandb.finish()
     close_proxy()
-
 
 
 if __name__ == "__main__":

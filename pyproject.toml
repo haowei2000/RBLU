@@ -31,8 +31,8 @@ build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core"]
 
 [tool.poetry.scripts]
-eval = "llm_evaluation.main:main"
-draw = "llm_evaluation.chart:main"
+eval = "rblu.main:main"
+draw = "rblu.chart:main"
 
 [tool.black]
 line-length = 50
