@@ -166,7 +166,7 @@ We tested three open source models, [LLAMA3.1-8BInstruct](https://github.com/fac
 
 ### Similarity Scores in Multi-rounds
 
-The right side indicates 3 domains, and the top side indicates 2 score types and 2 languages. "Cosine" represents "BERT-Score", the cosine similarity of vectorized answer texts, while "Rouge1" is the corresponding Rouge-1 score. The datasets are in English and Chinese. In the legend, "Original" indicates $\text{Score}_{\text{Original}}$, and "Previous" indicates $\text{Score}_{\text{Previous}}$. The x-axis of each subplot shows the number of rounds (1–4), and the y-axis shows similarity scores (0.0–1.0).
+The right side indicates 3 domains, and the top side indicates 2 score types and 2 languages. "Cosine" represents "BERT-Score", the cosine similarity of vectorized answer texts, while "Rouge1" is the corresponding Rouge-1 score. The datasets are in English and Chinese. In the legend, "Original" indicates Score_Original, and "Previous" indicates Score_Previous. The x-axis of each subplot shows the number of rounds (1–4), and the y-axis shows similarity scores (0.0–1.0).
 
 <p align="center">
   <img src="src/chart/line/legend.png" alt="Legend" width="80%" />

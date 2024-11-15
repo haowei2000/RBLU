@@ -3,8 +3,8 @@ The module is used to draw the chart for the evaluation result
 """
 
 import argparse
-import os
 import logging
+import os
 from pathlib import Path
 
 import datasets
