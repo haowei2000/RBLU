@@ -6,17 +6,21 @@ from pathlib import Path
 
 import datasets
 import torch
+import wandb
 import yaml
 from accelerate.utils import write_basic_config
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-import wandb
 from rblu.data_load import load_qa
 from rblu.evaluation import MyGenerator, evaluate, save_score
 from rblu.metric import rouge_and_bert
 from rblu.path import result_dir, score_dir
-from rblu.process import (Process, apply_default_template,
-                          apply_default_zh_template, get_process)
+from rblu.process import (
+    Process,
+    apply_default_template,
+    apply_default_zh_template,
+    get_process,
+)
 from rblu.proxy import close_proxy, set_proxy
 
 
@@ -142,7 +146,9 @@ def main():
         - If 'wandb' is not enabled in the configuration, it runs in dryrun
           mode.
     """
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
     set_proxy()
     logging.info("Proxy set up")
     # set the basic accelerate environment on mutil-gpu
@@ -154,7 +160,9 @@ def main():
     ) as config_file:
         config = yaml.safe_load(config_file)
     if config["wandb"]:
-        logging.info("Wandb enabled and please make sure that the wandb api key is set up")
+        logging.info(
+            "Wandb enabled and please make sure that the wandb api key is set up"
+        )
         wandb.init(
             project="llm-evaluation",
             config=config,
