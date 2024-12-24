@@ -36,7 +36,6 @@ def text2tsne(texts_list, languge, task, model):
         device=device,
     )
     X = model.encode(texts_flat, normalize_embeddings=True, batch_size=50)
-    # t-SNE dimensionality reduction
     tsne = TSNE(n_components=3, perplexity=30, max_iter=1000)
     X_tsne = tsne.fit_transform(X)
     output_df = pd.DataFrame(X_tsne, columns=["x", "y", "z"])
