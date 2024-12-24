@@ -144,12 +144,9 @@ def load_qa(
     filename = data_dir / f"{lang}_{task_name}.json"
 
     if from_remote:
-
         dataset = load_dataset_from_remote(lang, task_name)
     else:
-        dataset = load_dataset(
-            "json", data_files=str(filename), split="train"
-        )
+        dataset = load_dataset("json", data_files=str(filename), split="train")
 
     dataset = rename_all_columns(
         dataset,
@@ -244,11 +241,11 @@ def draw_length_distribution(config) -> None:
         plt.figure(figsize=(8, 6))
 
         # 设置颜色
-        colors = config['color_family']
+        colors = config["color_family"]
         box = plt.boxplot(
             [
-            filtered_data[filtered_data["Category"] == task]["Text Length"]
-            for task in all_questions
+                filtered_data[filtered_data["Category"] == task]["Text Length"]
+                for task in all_questions
             ],
             patch_artist=True,
             labels=all_questions.keys(),
@@ -259,8 +256,8 @@ def draw_length_distribution(config) -> None:
             patch.set_facecolor(color)
 
         # 设置中间的分割线用黑色
-        for median in box['medians']:
-            median.set(color='black')
+        for median in box["medians"]:
+            median.set(color="black")
 
         # 设置图表的标题
         plt.title("Text Length Distribution (Box Plot)")
