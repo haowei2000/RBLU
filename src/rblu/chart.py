@@ -257,7 +257,6 @@ def draw_tsne(config: dict, suffix: str = "png"):
         # Save the legend separately
         fig_legend = plt.figure(figsize=(10, 0.5), constrained_layout=True)
         handles, labels = ax.get_legend_handles_labels()
-        labels = [label for label in labels]
         fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
         legend_path = tsne_output_dir / f"legend.{suffix}"
         fig_legend.savefig(legend_path, bbox_inches="tight")
