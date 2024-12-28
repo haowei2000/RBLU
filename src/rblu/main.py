@@ -66,7 +66,7 @@ def create_generator(config):
         tokenizer.pad_token = tokenizer.eos_token
     if model_name == "llama":
         config["gen_kwargs"]["pad_token_id"] = tokenizer.eos_token_id
-    generator = MyGenerator(
+    return MyGenerator(
         model=model,
         tokenizer=tokenizer,
         batch_size=config["batch_size"],
@@ -74,13 +74,12 @@ def create_generator(config):
         tokenizer_kwargs=config["tokenizer_kwargs"],
         gen_kwargs=config["gen_kwargs"],
     )
-    return generator
 
 
 def evaluate_task(config, task, process):
     model_name = config["model"]["model_name"]
     language = config["language"]
-    logging.info(f"Start evaluating, {model_name}:{task}:{language}")
+    logging.info("Start evaluating, %s:%s:%s", model_name, task, language)
 
     original_questions, _ = load_qa(
         lang=language,
@@ -94,8 +93,9 @@ def evaluate_task(config, task, process):
 
     if os.path.exists(output_path) and not config["force_regenerate"]:
         logging.info(
-            f"The result already exists in {output_path}"
-            f'if you want to regenerate, please set "force_regenerate" to True'
+            "The result already exists in %s if you want to regenerate, "
+            "please set 'force_regenerate' to True",
+            output_path,
         )
         qa_dataset = datasets.load_from_disk(output_path)
     else:
@@ -112,7 +112,7 @@ def evaluate_task(config, task, process):
     qa_dataset = qa_dataset.filter(
         lambda example: all(value.strip() for value in example.values())
     )
-    score = save_score(
+    return save_score(
         qa_dataset,
         metric_compute=rouge_and_bert,
         loop_count=config["loop_count"],
@@ -121,7 +121,6 @@ def evaluate_task(config, task, process):
         language=language,
         path=score_dir / f"{model_name}_{task}_{language}_scores.csv",
     )
-    return score
 
 
 def main():
@@ -161,7 +160,8 @@ def main():
         config = yaml.safe_load(config_file)
     if config["wandb"]:
         logging.info(
-            "Wandb enabled and please make sure that the wandb api key is set up"
+            "Wandb enabled and please make "
+            "sure that the wandb api key is set up"
         )
         wandb.init(
             project="llm-evaluation",
@@ -169,7 +169,7 @@ def main():
             tags=[config["model"]["model_name"]],
         )
     else:
-        logging.info("Wandb is disabled")
+        logging.info(msg="Wandb is disabled")
         os.environ["WANDB_MODE"] = "dryrun"
         wandb.init(mode="disabled")
     process = get_process(config["language"])

@@ -74,7 +74,7 @@ class Tsne:
             )
         else:
             device = torch.device("cpu")
-        logging.info(f"device is {device}")
+        logging.info("device is %s", device)
         model = SentenceTransformer(
             "all-MiniLM-L6-v2",
             device=device,
@@ -201,7 +201,7 @@ def draw_tsne(config: dict, suffix: str = "png"):
                         )
                     if col == axs.shape[1] - 1:
                         ax.text2D(
-                            s=f"{task.capitalize()}-{_translate_language(language).capitalize()}",
+                            s=f"{task.capitalize()}-{_translate_language(code=language).capitalize()}",
                             x=1.1,
                             y=0.5,
                             rotation=90,
@@ -214,7 +214,7 @@ def draw_tsne(config: dict, suffix: str = "png"):
         top_offset = 0.06 / axs.shape[1]
         right_offset = 0.08 / axs.shape[0]
         # 在子图之间添加水平虚线——
-        for row in range(0, axs.shape[0] + 1):
+        for row in range(axs.shape[0] + 1):
             if row != 0:
                 y_data = (
                     row / axs.shape[0] - top_offset,
@@ -266,7 +266,7 @@ def draw_tsne(config: dict, suffix: str = "png"):
             tsne_output_dir / f"tsne_{mode}_{language}_plots.{suffix}"
         )  # noqa: F821
         plt.savefig(output_path, bbox_inches="tight")
-        logging.info(f"Saved the chart to {output_path}")
+        logging.info("Saved the chart to %s", output_path)
 
 
 def _line(
@@ -391,21 +391,16 @@ def _combine_score(
 
 
 def _translate_language(code: str) -> str:
-    # 定义字典映射
     translation_dict = {"zh": "chinese", "en": "english"}
-
-    # 获取翻译
     return translation_dict.get(code, "unknown")
 
 
 def _translate_model(model_name: str, with_refer=False) -> str:
-    # 定义字典映射
     suffix = ""
     translation_dict = {"llama": "LLAMA3.1", "glm": "GLM4", "qwen": "Qwen2"}
     suffix_dict: dict[str, str] = {"n-1": "Previous", "0": "Original"}
     if with_refer:
         model_name, suffix = model_name.split(sep=" ")
-    # 获取翻译
     supper_model_name = translation_dict.get(model_name, "unknown")
     supper_suffix = suffix_dict.get(suffix, "unknown")
     return (
@@ -496,7 +491,6 @@ def draw_score(
                             y=0.5,
                             x=1.2,
                         )
-        # 保存图形
         fig.supxlabel("Round")
         fig.supylabel("Score")
         if output_dir is None:
@@ -519,7 +513,7 @@ def draw_score(
             chart_output_dir / f"{chart_type}_{mode}_combined_plots.{suffix}"
         )  # noqa: F821
         plt.savefig(output_path, bbox_inches="tight")
-        logging.info(f"Saved the chart to {output_path}")
+        logging.info("Saved the chart to %s", output_path)
 
 
 def draw_length_distribution(config) -> None:
@@ -566,7 +560,7 @@ def draw_length_distribution(config) -> None:
                 "Text Length"
             ].mean()
             logging.info(
-                f"Average length for {task} ({lang}): {avg_length:.2f}"
+                "Average length for %s (%s): %.2f", task, lang, avg_length
             )
         # 设置图像
         plt.figure(figsize=(8, 6))
@@ -601,7 +595,7 @@ def draw_length_distribution(config) -> None:
         )
         output_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output_path)
-        logging.info(f"Saved the chart to {output_path}")
+        logging.info("Saved the chart to %s", output_path)
         plt.close()
 
 
