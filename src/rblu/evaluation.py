@@ -11,8 +11,11 @@ import torch
 from datasets import Dataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import (BatchEncoding, PreTrainedTokenizer,
-                          PreTrainedTokenizerFast)
+from transformers import (
+    BatchEncoding,
+    PreTrainedTokenizer,
+    PreTrainedTokenizerFast,
+)
 
 from rblu.process import Process
 
@@ -124,19 +127,24 @@ class MyGenerator:
         dataloader = DataLoader(
             dataset=dataset, batch_size=self.batch_size, shuffle=False
         )
-        
+
         responses = []
         for inputs in tqdm(dataloader, desc="Generating responses"):
             with torch.no_grad():
-                inputs = {key: tensor.to(self.device) for key, tensor in inputs.items()}
+                inputs = {
+                    key: tensor.to(self.device)
+                    for key, tensor in inputs.items()
+                }
                 outputs = self.model.generate(**inputs, **self.gen_kwargs)
                 decoded_outputs = self.tokenizer.batch_decode(
-                    outputs[:, inputs["input_ids"].size(1):],
+                    outputs[:, inputs["input_ids"].size(1) :],
                     skip_special_tokens=True,
                 )
                 responses.extend(decoded_outputs)
-        
-        print(f"Time taken for batch gen: {time.time() - start_time:.2f} seconds")
+
+        print(
+            f"Time taken for batch gen: {time.time() - start_time:.2f} seconds"
+        )
         return responses
 
     def _tokenize_texts(self, text_list: Any | list[str]) -> BatchEncoding:
@@ -196,9 +204,7 @@ def evaluate(
         )
         qa_dataset = qa_dataset.map(
             process.answer_extract, fn_kwargs={"loop": loop}
-        ).map(
-            process.answer_prompt, fn_kwargs={"loop": loop}
-        )
+        ).map(process.answer_prompt, fn_kwargs={"loop": loop})
         qa_dataset = qa_dataset.add_column(
             name=f"q{loop + 1}_output",
             column=generator(qa_dataset[f"a{loop}_prompt"]),

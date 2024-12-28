@@ -9,7 +9,7 @@ def extract_question(example: Dict, loop: int, split_text: str) -> Dict:
     question = example[f"q{loop + 1}_output"].replace(answer, "", 1)
     split = question.split(split_text)
     example[f"q{loop + 1}"] = split[-1].strip() if len(split) > 1 else question
-    example[f"q{loop + 1}"] = example[f"q{loop + 1}"].strip("‘’”“：；\"\'")
+    example[f"q{loop + 1}"] = example[f"q{loop + 1}"].strip("‘’”“：；\"'")
     return example
 
 
