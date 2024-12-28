@@ -87,7 +87,6 @@ def rouge_and_bert(
     if language == "zh":
         predictions = [" ".join(jieba.cut(pred)) for pred in predictions]
         references = [" ".join(jieba.cut(ref)) for ref in references]
-        # score = Rouge().get_scores(predictions, references, avg=True)
     rouge = evaluate.load("rouge")
     score = rouge.compute(predictions=predictions, references=references)
     if not isinstance(score, dict):

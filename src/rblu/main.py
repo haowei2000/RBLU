@@ -175,8 +175,6 @@ def main():
     process = get_process(config["language"])
     for task in config["task_list"]:
         evaluate_task(config, task, process)
-        # torch.cuda.empty_cache()
-        # torch.cuda.ipc_collect()
     wandb.finish()
     close_proxy()
 
