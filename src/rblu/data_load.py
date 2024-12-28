@@ -47,10 +47,11 @@ def rename_all_columns(
     dataset = dataset.rename_columns(
         {col: col.lower() for col in dataset.column_names}
     )
-    fields = []
-    for name in candidate_column:
-        if name.lower() in dataset.column_names:
-            fields.append(name)
+    fields = [
+        name
+        for name in candidate_column
+        if name.lower() in dataset.column_names
+    ]
     if len(fields) == 1:
         answer_field = fields[0]
         if new_column in dataset.column_names:
@@ -80,28 +81,7 @@ def rename_all_columns(
 
 def load_dataset_from_remote(language: str, task: str) -> Dataset:
     """Load remote dataset"""
-    if language == "zh":
-        if task in ["medical", "financial", "legal"]:
-            dataset = load_dataset(
-                "wanghw/human-ai-comparison",
-                verification_mode="no_checks",
-                split="train",
-            )
-            dataset = dataset.map(
-                lambda x: {"answer": x["answer"].strip("[]")}
-            )
-            dataset = dataset.filter(
-                lambda x: x["field"] == task
-                and x["label"] == "human"
-                and x["question"] is not None
-            )
-        elif task == "code":
-            dataset = load_dataset(
-                "jean1/45k_python_code_chinese_instruction", split="train"
-            )
-        else:
-            raise ValueError("Invalid task for Chinese language")
-    elif language == "en":
+    if language == "en":
         dataset_name_dict = {
             "medical": {
                 "path": "Malikeh1375/medical-question-answering-datasets",
@@ -125,6 +105,27 @@ def load_dataset_from_remote(language: str, task: str) -> Dataset:
             dataset = load_dataset(**dataset_name_dict[task])
         else:
             raise ValueError("Invalid task for English language")
+    elif language == "zh":
+        if task in {"medical", "financial", "legal"}:
+            dataset = load_dataset(
+                "wanghw/human-ai-comparison",
+                verification_mode="no_checks",
+                split="train",
+            )
+            dataset = dataset.map(
+                lambda x: {"answer": x["answer"].strip("[]")}
+            )
+            dataset = dataset.filter(
+                lambda x: x["field"] == task
+                and x["label"] == "human"
+                and x["question"] is not None
+            )
+        elif task == "code":
+            dataset = load_dataset(
+                "jean1/45k_python_code_chinese_instruction", split="train"
+            )
+        else:
+            raise ValueError("Invalid task for Chinese language")
     else:
         raise ValueError("Invalid language")
 
@@ -184,30 +185,29 @@ def load_qa(
     )
 
     if count is not None:
-        if len(dataset) >= count:
-            dataset = dataset.select(range(count))
-            dataset.to_json(
-                filename,
-                force_ascii=False,
-                lines=True,
-            )
-        else:
+        if len(dataset) < count:
             raise ValueError(
                 f"Not enough data.Required: {count}, Available: {len(dataset)}"
             )
+        dataset = dataset.select(range(count))
+        dataset.to_json(
+            filename,
+            force_ascii=False,
+            lines=True,
+        )
     return dataset["question"], dataset["answer"]
 
 
-def draw_length_distribution(config) -> None:
+def draw_length_distribution(data_configuration) -> None:
     for lang in ["en", "zh"]:
         all_questions = {}
         for task in ["medical", "financial", "legal"]:
             original_questions, _ = load_qa(
                 lang=lang,
                 task_name=task,
-                count=config["data"]["doc_count"],
-                min_length=config["data"]["min_length"],
-                max_length=config["data"]["max_length"],
+                count=data_configuration["data"]["doc_count"],
+                min_length=data_configuration["data"]["min_length"],
+                max_length=data_configuration["data"]["max_length"],
                 from_remote=False,
             )
             all_questions[task] = original_questions
@@ -241,7 +241,7 @@ def draw_length_distribution(config) -> None:
         plt.figure(figsize=(8, 6))
 
         # 设置颜色
-        colors = config["color_family"]
+        colors = data_configuration["color_family"]
         box = plt.boxplot(
             [
                 filtered_data[filtered_data["Category"] == task]["Text Length"]
@@ -271,21 +271,3 @@ def draw_length_distribution(config) -> None:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output_path)
         plt.close()
-
-
-if __name__ == "__main__":
-    plt.rcParams["font.family"] = "Arial"
-    plt.rcParams["figure.dpi"] = 600  # Set resolution to 600ppi
-    plt.rcParams["figure.figsize"] = [
-        8.27 * 0.25,
-        11.69 * 0.75,
-    ]  # A4 size is 8.27 x 11.69 inches
-    plt.rcParams["font.size"] = 12  # Set font size to 12pt
-    current_dir = Path(__file__).parent
-    with open(
-        file=current_dir / "config.yml",
-        mode="r",
-        encoding="utf-8",
-    ) as config_file:
-        config = yaml.safe_load(config_file)  # noqa: F821
-    draw_length_distribution(config)

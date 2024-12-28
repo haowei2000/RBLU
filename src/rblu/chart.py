@@ -106,7 +106,7 @@ class Tsne:
 
 
 def _scatter_3D(
-    round: int,
+    iteration: int,
     doc_count: int,
     vector=None,
     colors=None,
@@ -114,22 +114,22 @@ def _scatter_3D(
 ):
     # Automatically find a device with available memory, prioritizing cuda:1
     if vector is not None:
-        for round in range(round):
+        for iteration in range(iteration):
             if colors:
                 ax.scatter(
                     xs=vector["x"][
-                        round * doc_count : (round + 1) * doc_count
+                        iteration * doc_count : (iteration + 1) * doc_count
                     ],
                     ys=vector["y"][
-                        round * doc_count : (round + 1) * doc_count
+                        iteration * doc_count : (iteration + 1) * doc_count
                     ],
                     zs=vector["z"][
-                        round * doc_count : (round + 1) * doc_count
+                        iteration * doc_count : (iteration + 1) * doc_count
                     ],
-                    c=colors[round],
+                    c=colors[iteration],
                     s=5,
-                    label=f"Round {round}",
-                    alpha=1 - round * 0.1,  # Set transparency
+                    label=f"Round {iteration}",
+                    alpha=1 - iteration * 0.1,  # Set transparency
                 )
             else:
                 raise NotImplementedError
@@ -177,7 +177,7 @@ def draw_tsne(config: dict, suffix: str = "png"):
                     )
                     vector = tsne_data.read()
                     ax = _scatter_3D(
-                        round=tsne_data.round,
+                        iteration=tsne_data.round,
                         doc_count=tsne_data.doc_count,
                         vector=vector,
                         ax=axs[row][col],
