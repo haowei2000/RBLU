@@ -260,7 +260,7 @@ def draw_tsne(config: dict, suffix: str = "png"):
         plt.close(fig_legend)
         os.makedirs(tsne_output_dir, exist_ok=True)
         output_path = (
-            tsne_output_dir / f"tsne_{mode}_{language}_plots.{suffix}"
+            tsne_output_dir / f"tsne_plots.{suffix}"
         )  # noqa: F821
         plt.savefig(output_path, bbox_inches="tight")
         logging.info("Saved the chart to %s", output_path)
