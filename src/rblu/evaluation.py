@@ -246,7 +246,7 @@ def get_score(
         ValueError: If the loop is less than 1.
     """
     if loop >= 1:
-        if mode in ["q", "a"]:
+        if mode in {"q", "a"}:
             predictions = qa_dataset[f"{mode}{loop}"]
             if refer == "n-1":
                 references = qa_dataset[f"{mode}{loop - 1}"]
