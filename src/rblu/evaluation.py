@@ -96,7 +96,10 @@ class MyGenerator:
         )
         self.tokenizer_kwargs = tokenizer_kwargs
         self.gen_kwargs = gen_kwargs
-        self.device = next(model.parameters()).device
+        try:
+            self.device = next(model.parameters()).device
+        except StopIteration as e:
+            raise ValueError("The model does not have any parameters.") from e
 
     def __call__(self, text_list: list[str]) -> list[str]:
         """
