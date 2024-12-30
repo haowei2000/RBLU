@@ -492,6 +492,7 @@ def draw_score(
             chart_output_dir = chart_dir / chart_type
         os.makedirs(chart_output_dir, exist_ok=True)
         # output legend
+
         ax = axs.flat[0]
         # Save the legend separately
         fig_legend = plt.figure(figsize=(10, 2), constrained_layout=True)
@@ -502,6 +503,7 @@ def draw_score(
         ]
         fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
         legend_path = chart_output_dir / f"legend.{suffix}"
+
         fig_legend.savefig(legend_path, bbox_inches="tight")
         plt.close(fig_legend)
         output_path = (
