@@ -6,21 +6,17 @@ from pathlib import Path
 
 import datasets
 import torch
+import wandb
 import yaml
 from accelerate.utils import write_basic_config
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-import wandb
 from rblu.data_load import load_qa
 from rblu.evaluation import MyGenerator, reverse_infer, save_score
 from rblu.metric import rouge_and_bert
 from rblu.path import result_dir, score_dir
-from rblu.process import (
-    Process,
-    apply_default_template,
-    apply_default_zh_template,
-    get_process,
-)
+from rblu.process import (Process, apply_default_template,
+                          apply_default_zh_template, get_process)
 from rblu.proxy import close_proxy, set_proxy
 
 
@@ -76,7 +72,7 @@ def create_generator(config):
     )
 
 
-def evaluate_task(config:dict, task:str, process:Process):
+def evaluate_task(config: dict, task: str, process: Process):
     model_name = config["model"]["model_name"]
     language = config["language"]
     logging.info("Start evaluating, %s:%s:%s", model_name, task, language)
