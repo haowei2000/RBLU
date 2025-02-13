@@ -3,7 +3,6 @@ This module contains the functions to compute the Rouge and BERT scores
 for the results of the LLM evaluation process.
 """
 
-
 import evaluate
 import jieba
 import torch

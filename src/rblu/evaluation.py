@@ -6,16 +6,14 @@ which is the main class for evaluating the model.
 import logging
 import time
 from collections.abc import Callable
+
 import pandas as pd
 import torch
 from datasets import Dataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import (
-    BatchEncoding,
-    PreTrainedTokenizer,
-    PreTrainedTokenizerFast,
-)
+from transformers import (BatchEncoding, PreTrainedTokenizer,
+                          PreTrainedTokenizerFast)
 
 from rblu.process import Process
 
