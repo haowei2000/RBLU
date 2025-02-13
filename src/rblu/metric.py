@@ -3,7 +3,6 @@ This module contains the functions to compute the Rouge and BERT scores
 for the results of the LLM evaluation process.
 """
 
-from typing import Dict, List
 
 import evaluate
 import jieba
@@ -12,8 +11,8 @@ from sentence_transformers import SentenceTransformer
 
 
 def bert_score(
-    predictions: List[str], references: List[str]
-) -> Dict[str, float]:
+    predictions: list[str], references: list[str]
+) -> dict[str, float]:
     """
     Calculates the BERT score between the given predictions and references.
 
@@ -68,8 +67,8 @@ def detect_language(text: str) -> str:
 
 
 def rouge_and_bert(
-    predictions: List[str], references: List[str]
-) -> Dict[str, float]:
+    predictions: list[str], references: list[str]
+) -> dict[str, float]:
     """
     Compute the Rouge and BERT scores for the given predictions and references.
 

@@ -3,9 +3,9 @@ a file that contains the Evaluation class,
 which is the main class for evaluating the model.
 """
 
+import logging
 import time
-from typing import Any, Callable, Optional
-
+from collections.abc import Callable
 import pandas as pd
 import torch
 from datasets import Dataset
@@ -90,7 +90,7 @@ class MyGenerator:
             tokenizer
         )
         self.batch_size = batch_size
-        self.apply_template: Optional[Callable[[str], list[dict]]] = (
+        self.apply_template: Callable[[str], list[dict]] | None = (
             apply_template
         )
         self.tokenizer_kwargs = tokenizer_kwargs
@@ -144,12 +144,14 @@ class MyGenerator:
                 )
                 responses.extend(decoded_outputs)
 
-        print(
-            f"Time taken for batch gen: {time.time() - start_time:.2f} seconds"
+        logging.info(
+            "Time taken for batch gen: {:.2f} seconds".format(
+                time.time() - start_time
+            )
         )
         return responses
 
-    def _tokenize_texts(self, text_list: Any | list[str]) -> BatchEncoding:
+    def _tokenize_texts(self, text_list: list[str]) -> BatchEncoding:
         """
         Tokenize a list of texts using the specified tokenizer.
         If a template is applied, it uses the `apply_chat_template`
@@ -188,15 +190,27 @@ class MyGenerator:
         return tokenized_batch
 
 
-def evaluate(
+def reverse_infer(
     generator: Callable[[list[str]], list[str]],
     original_questions: list[str],
     loop_count: int,
     process: Process,
 ) -> Dataset:
+    """
+    Evaluates the model using the given generator function and process.
+
+    Args:
+        generator (Callable[[list[str]], list[str]]): The generator function
+        to use for generating responses.
+        original_questions (list[str]): A list of original questions to
+        evaluate.
+        loop_count (int): The number of loops to iterate for the evaluation.
+        process (Process): The process object containing the functions for
+        question and answer processing.
+    """
     qa_dataset = Dataset.from_dict({"q0": original_questions})
     for loop in range(loop_count):
-        print(f"Loop: {loop}")
+        logging.info(f"Loop: {loop}")
         qa_dataset = qa_dataset.map(
             process.question_prompt, fn_kwargs={"loop": loop}
         )
@@ -215,6 +229,19 @@ def evaluate(
             process.question_extract, fn_kwargs={"loop": loop}
         )
     return qa_dataset
+
+# TODO: Implement conservation_infer function
+def conservation_infer(
+    generator: Callable[[list[str]], list[str]],
+    original_questions: list[str],
+    loop_count: int,
+    process: Process,
+):
+    """
+    Evaluates the conservation ability of a model
+    using the given generator function and process.
+    """
+    pass
 
 
 def get_score(
@@ -255,11 +282,11 @@ def get_score(
                 references = qa_dataset[f"{mode}{0}"]
                 score = metric_compute(predictions, references)
             else:
-                print("Refer error")
+                logging.error("Refer error")
         else:
-            print("mode error")
+            logging.error("mode error")
     else:
-        print("Loop error")
+        logging.error("Loop error")
     return score
 
 

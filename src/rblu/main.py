@@ -6,17 +6,16 @@ from pathlib import Path
 
 import datasets
 import torch
-import wandb
 import yaml
 from accelerate.utils import write_basic_config
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+import wandb
 from rblu.data_load import load_qa
-from rblu.evaluation import MyGenerator, evaluate, save_score
+from rblu.evaluation import MyGenerator, reverse_infer, save_score
 from rblu.metric import rouge_and_bert
 from rblu.path import result_dir, score_dir
 from rblu.process import (
-    Process,
     apply_default_template,
     apply_default_zh_template,
     get_process,
@@ -100,7 +99,7 @@ def evaluate_task(config, task, process):
         qa_dataset = datasets.load_from_disk(output_path)
     else:
         generator = create_generator(config=config)
-        qa_dataset = evaluate(
+        qa_dataset = reverse_infer(
             generator=generator,
             original_questions=original_questions,
             loop_count=config["loop_count"],

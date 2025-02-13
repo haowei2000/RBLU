@@ -35,6 +35,7 @@ def text2tsne(texts_list, languge, task, model):
         "all-MiniLM-L6-v2",
         device=device,
     )
+
     X = model.encode(texts_flat, normalize_embeddings=True, batch_size=50)
     tsne = TSNE(n_components=3, perplexity=30, max_iter=1000)
     X_tsne = tsne.fit_transform(X)
@@ -86,6 +87,7 @@ class Tsne:
         output_df = pd.DataFrame(X_tsne, columns=["x", "y", "z"])
         output_df.to_parquet(self.path, index=False)
         return self.doc_count, X_tsne
+
 
     def read(self):
         if self.path.exists() is False:
@@ -368,7 +370,7 @@ def _combine_score(
     metric_name,
     mode: str,
     refer: str,
-) -> list:
+):
     """
     Purpose:combine the raw score to the line function format
     """
@@ -626,7 +628,7 @@ def main():
     )
     draw_length_distribution(config=config)
     draw_tsne(config=config, suffix=args.suffix)
-
+    logging.info()
 
 if __name__ == "__main__":
     main()
