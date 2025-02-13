@@ -20,7 +20,7 @@ from transformers import (
 from rblu.process import Process
 
 
-class TokenizedDataset(Dataset):
+class TokenizedDataset(torch.utils.data.Dataset):
     """
     TokenizedDataset is a custom dataset class
     for handling tokenized input data.
@@ -210,7 +210,7 @@ def reverse_infer(
     """
     qa_dataset = Dataset.from_dict({"q0": original_questions})
     for loop in range(loop_count):
-        logging.info(f"Loop: {loop}")
+        logging.info("Loop: %d".format(loop))
         qa_dataset = qa_dataset.map(
             process.question_prompt, fn_kwargs={"loop": loop}
         )
@@ -229,6 +229,7 @@ def reverse_infer(
             process.question_extract, fn_kwargs={"loop": loop}
         )
     return qa_dataset
+
 
 # TODO: Implement conservation_infer function
 def conservation_infer(
@@ -272,6 +273,7 @@ def get_score(
         ValueError: If the refer is not "n-1" or "0".
         ValueError: If the loop is less than 1.
     """
+    score = None
     if loop >= 1:
         if mode in {"q", "a"}:
             predictions = qa_dataset[f"{mode}{loop}"]
@@ -282,11 +284,11 @@ def get_score(
                 references = qa_dataset[f"{mode}{0}"]
                 score = metric_compute(predictions, references)
             else:
-                logging.error("Refer error")
+                raise ValueError("Refer error")
         else:
-            logging.error("mode error")
+            raise ValueError("Mode error")
     else:
-        logging.error("Loop error")
+        raise ValueError("Loop must be greater than or equal to 1")
     return score
 
 

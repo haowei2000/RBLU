@@ -1,5 +1,5 @@
 wandb: False # use wandb to log the results
-force_regenerate: False
+force_regenerate: True
 # forced to regenerate the data even if the result file exists
 
 
@@ -22,7 +22,7 @@ model:
   model_name: glm
   model_path:
     llama: /public/model/hub/LLM-Research/Meta-Llama-3-1-8B-Instruct/
-    glm: /public/model/hub/ZhipuAI/glm-4-9b-chat
+    glm: /root/.cache/modelscope/hub/ZhipuAI/glm-4-9b-chat-hf/
     qwen: /public/model/hub/qwen/
 
 batch_size: 8

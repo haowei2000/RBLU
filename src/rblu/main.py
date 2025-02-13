@@ -16,6 +16,7 @@ from rblu.evaluation import MyGenerator, reverse_infer, save_score
 from rblu.metric import rouge_and_bert
 from rblu.path import result_dir, score_dir
 from rblu.process import (
+    Process,
     apply_default_template,
     apply_default_zh_template,
     get_process,
@@ -75,12 +76,12 @@ def create_generator(config):
     )
 
 
-def evaluate_task(config, task, process):
+def evaluate_task(config:dict, task:str, process:Process):
     model_name = config["model"]["model_name"]
     language = config["language"]
     logging.info("Start evaluating, %s:%s:%s", model_name, task, language)
 
-    original_questions, _ = load_qa(
+    data_questions, _ = load_qa(
         lang=language,
         task_name=task,
         count=config["data"]["doc_count"],
@@ -101,7 +102,7 @@ def evaluate_task(config, task, process):
         generator = create_generator(config=config)
         qa_dataset = reverse_infer(
             generator=generator,
-            original_questions=original_questions,
+            original_questions=data_questions,
             loop_count=config["loop_count"],
             process=process,
         )
@@ -156,24 +157,24 @@ def main():
         "r",
         encoding="utf-8",
     ) as config_file:
-        config = yaml.safe_load(config_file)
-    if config["wandb"]:
+        run_config = yaml.safe_load(config_file)
+    if run_config["wandb"]:
         logging.info(
             "Wandb enabled and please make "
             "sure that the wandb api key is set up"
         )
         wandb.init(
             project="llm-evaluation",
-            config=config,
-            tags=[config["model"]["model_name"]],
+            config=run_config,
+            tags=[run_config["model"]["model_name"]],
         )
     else:
         logging.info(msg="Wandb is disabled")
         os.environ["WANDB_MODE"] = "dryrun"
         wandb.init(mode="disabled")
-    process = get_process(config["language"])
-    for task in config["task_list"]:
-        evaluate_task(config, task, process)
+    reverse_process = get_process(run_config["language"], stage="reverse")
+    for run_task in run_config["task_list"]:
+        evaluate_task(run_config, run_task, reverse_process)
     wandb.finish()
     close_proxy()
 
