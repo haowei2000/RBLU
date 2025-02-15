@@ -3,22 +3,19 @@ a script to load data from different sources and save it to csv
 folder path is src/rblu/data
 """
 
-from pathlib import Path
-from typing import Any, List
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import yaml
 from datasets import Dataset, load_dataset
 
-from rblu.path import chart_dir, data_dir
+from rblu.utils.path import chart_dir, data_dir
 
 
 def rename_all_columns(
     dataset: Dataset,
-    candidate_column: List[str],
+    candidate_column: list[str],
     new_column: str,
-    ignore_columns: Any | list[str] = None,
+    ignore_columns: list[str] = None,
 ) -> Dataset:
     """
     Renames columns in a dataset based on candidate column names and a new
@@ -33,7 +30,7 @@ def rename_all_columns(
 
     Args:
         dataset (Dataset): The dataset to be modified. candidate_column
-        (List[str]): A list of candidate column names to search for in the
+        (list[str]): A list of candidate column names to search for in the
         dataset. new_column (str): The new column name to rename the found
         column(s) to.
 
@@ -133,19 +130,19 @@ def load_dataset_from_remote(language: str, task: str) -> Dataset:
 
 
 def load_qa(
-    lang: str,
-    task_name: str,
+    data_language: str,
+    data_task: str,
     min_length: int = 10,
     max_length: int = 100,
-    count: Any | int = None,
+    count: int = None,
     from_remote: bool = True,
-    ignore_columns: Any | List[str] = None,
+    ignore_columns: list[str] = None,
 ) -> tuple[list[str], list[str]]:
     """Load question-answer pairs from dataset"""
-    filename = data_dir / f"{lang}_{task_name}.json"
+    filename = data_dir / f"{data_language}_{data_task}.json"
 
     if from_remote:
-        dataset = load_dataset_from_remote(lang, task_name)
+        dataset = load_dataset_from_remote(data_language, data_task)
     else:
         dataset = load_dataset("json", data_files=str(filename), split="train")
 
@@ -203,8 +200,8 @@ def draw_length_distribution(data_configuration) -> None:
         all_questions = {}
         for task in ["medical", "financial", "legal"]:
             original_questions, _ = load_qa(
-                lang=lang,
-                task_name=task,
+                data_language=lang,
+                data_task=task,
                 count=data_configuration["data"]["doc_count"],
                 min_length=data_configuration["data"]["min_length"],
                 max_length=data_configuration["data"]["max_length"],
@@ -227,13 +224,13 @@ def draw_length_distribution(data_configuration) -> None:
         )
 
         # Remove outliers
-        Q1 = melted_data["Text Length"].quantile(0.25)
-        Q3 = melted_data["Text Length"].quantile(0.75)
-        IQR = Q3 - Q1
+        q1 = melted_data["Text Length"].quantile(0.25)
+        q3 = melted_data["Text Length"].quantile(0.75)
+        iqr = q3 - q1
         filtered_data = melted_data[
             ~(
-                (melted_data["Text Length"] < (Q1 - 1.5 * IQR))
-                | (melted_data["Text Length"] > (Q3 + 1.5 * IQR))
+                (melted_data["Text Length"] < (q1 - 1.5 * iqr))
+                | (melted_data["Text Length"] > (q3 + 1.5 * iqr))
             )
         ]
 

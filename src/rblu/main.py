@@ -8,49 +8,55 @@ import datasets
 import torch
 import yaml
 from accelerate.utils import write_basic_config
+from pandas import DataFrame
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 import wandb
 from rblu.data_load import load_qa
-from rblu.evaluation import MyGenerator, reverse_infer, save_score
+from rblu.evaluation import conservation_infer, reverse_infer, save_score
+from rblu.generate import APIGenerator, MyGenerator
 from rblu.metric import rouge_and_bert
-from rblu.path import result_dir, score_dir
-from rblu.process import (
-    Process,
-    apply_default_template,
-    apply_default_zh_template,
-    get_process,
+from rblu.utils.api import parse_api
+from rblu.utils.path import result_dir, score_dir
+from rblu.utils.proxy import close_proxy, set_proxy
+from rblu.process.reverse_process import ReverseProcess, get_reverse_process
+from rblu.process.reservation_process import (
+    ReservationProcess,
+    get_reservation_process,
 )
-from rblu.proxy import close_proxy, set_proxy
+from rblu.template import apply_default_template, apply_default_zh_template
 
 
-def create_generator(config):
+def create_generator(config: dict) -> APIGenerator | MyGenerator:
     """
-    Creates and returns a generator object based on the provided configuration.
+    Creates a generator object based on the provided configuration.
+
+    This function determines whether to use an API generator or a local
+    generator based on the 'model_checkpoint' value in the configuration. If the
+    'model_checkpoint' is "api", it creates an APIGenerator. Otherwise, it
+    creates a local generator using the '_get_local_generator' helper function.
 
     Args:
-        config (dict): A dictionary containing the configuration parameters.
-            - model (dict): Contains model-related configurations.
-                - model_name (str): The name of the model to be used.
-                - model_path (dict): A dictionary mapping model names to their
-                  checkpoints.
-            - language (str): The language code (e.g., "zh" for Chinese).
-            - batch_size (int): The batch size for the generator.
-            - tokenizer_kwargs (dict): Additional keyword arguments for the
-              tokenizer.
-            - gen_kwargs (dict): Additional keyword arguments for the generator
+        config (dict): Configuration dictionary containing model information.
 
     Returns:
-        MyGenerator: An instance of MyGenerator initialized with the specified
-        model, tokenizer, and configurations.
+        Generator: An instance of either APIGenerator or MyGenerator.
     """
     model_name = config["model"]["model_name"]
     model_checkpoint = config["model"]["model_path"][model_name]
-    language = config["language"]
-    if language == "zh":
-        apply_template = apply_default_zh_template
+    if model_checkpoint.startswith("api--"):
+        return APIGenerator(**parse_api(model_checkpoint))
     else:
-        apply_template = apply_default_template
+        return _get_local_generator(config, model_checkpoint, model_name)
+
+
+def _get_local_generator(config, model_checkpoint, model_name):
+    language = config["language"]
+    apply_template = (
+        apply_default_zh_template
+        if language == "zh"
+        else apply_default_template
+    )
     model = AutoModelForCausalLM.from_pretrained(
         model_checkpoint,
         device_map="auto",
@@ -76,22 +82,60 @@ def create_generator(config):
     )
 
 
-def evaluate_task(config:dict, task:str, process:Process):
-    model_name = config["model"]["model_name"]
-    language = config["language"]
-    logging.info("Start evaluating, %s:%s:%s", model_name, task, language)
+def start_evaluation(
+    evaluate_config: dict,
+    evaluate_task: str,
+) -> DataFrame:
+    """
+    Evaluates a given task using the specified configuration and process.
 
-    data_questions, _ = load_qa(
-        lang=language,
-        task_name=task,
-        count=config["data"]["doc_count"],
-        min_length=config["data"]["min_length"],
-        max_length=config["data"]["max_length"],
+    Args:
+        config (dict): Configuration dictionary containing model, language,
+        data, and other settings. task (str): The name of the task to evaluate.
+        process (Process): The process object used for evaluation.
+
+    Returns:
+        DataFrame: A DataFrame containing the evaluation scores.
+
+    The function performs the following steps: 1. Logs the start of the
+    evaluation process. 2. Loads the question-answer data based on the provided
+    configuration. 3. Checks if the evaluation result already exists and loads
+    it if available and regeneration is not forced. 4. If the result does not
+    exist or regeneration is forced, it creates a generator and performs reverse
+    inference. 5. Saves the generated dataset to disk. 6. Converts the dataset
+    to JSON format. 7. Filters out rows with any empty string values in the
+    dataset. 8. Computes and saves the evaluation scores using the specified
+    metrics.
+
+    Note:
+        The function assumes the existence of helper functions such as
+        `load_qa`, `create_generator`, `reverse_infer`, `save_score`, and
+        `rouge_and_bert`, as well as directories `result_dir` and `score_dir`.
+    """
+    model_name = evaluate_config["model"]["model_name"]
+    language = evaluate_config["language"]
+    logging.info(
+        "Start evaluating, %s:%s:%s:%s",
+        model_name,
+        evaluate_task,
+        language,
+        evaluate_config["stage"],
     )
 
-    output_path = result_dir / f"{model_name}_{task}_{language}"
+    data_questions, _ = load_qa(
+        data_language=language,
+        data_task=evaluate_task,
+        count=evaluate_config["data"]["doc_count"],
+        min_length=evaluate_config["data"]["min_length"],
+        max_length=evaluate_config["data"]["max_length"],
+    )
 
-    if os.path.exists(output_path) and not config["force_regenerate"]:
+    output_path = (
+        result_dir
+        / f"{model_name}_{evaluate_task}_{evaluate_config['stage']}_{language}"
+    )
+
+    if os.path.exists(output_path) and not evaluate_config["force_regenerate"]:
         logging.info(
             "The result already exists in %s if you want to regenerate, "
             "please set 'force_regenerate' to True",
@@ -99,13 +143,33 @@ def evaluate_task(config:dict, task:str, process:Process):
         )
         qa_dataset = datasets.load_from_disk(output_path)
     else:
-        generator = create_generator(config=config)
-        qa_dataset = reverse_infer(
-            generator=generator,
-            original_questions=data_questions,
-            loop_count=config["loop_count"],
-            process=process,
-        )
+        generator = create_generator(config=evaluate_config)
+        match evaluate_config["stage"]:
+            case "reverse":
+                evaluation_process = get_reverse_process(
+                    evaluate_config["language"]
+                )
+                qa_dataset = reverse_infer(
+                    generator=generator,
+                    original_questions=data_questions,
+                    loop_count=evaluate_config["loop_count"],
+                    reverse_process=evaluation_process,
+                )
+            case "reservation":
+                evaluation_process = get_reservation_process(
+                    evaluate_config["language"]
+                )
+                qa_dataset = conservation_infer(
+                    generator=generator,
+                    original_questions=data_questions,
+                    loop_count=evaluate_config["loop_count"],
+                    reservation_process=evaluation_process,
+                )
+            case _:
+                raise ValueError(
+                    f"The stage {evaluate_config['stage']} is not supported"
+                )
+
         qa_dataset.save_to_disk(output_path)
     qa_dataset.to_json(f"{output_path}.json", force_ascii=False)
     # Filter out rows with any empty string in the dataset
@@ -115,11 +179,11 @@ def evaluate_task(config:dict, task:str, process:Process):
     return save_score(
         qa_dataset,
         metric_compute=rouge_and_bert,
-        loop_count=config["loop_count"],
+        loop_count=evaluate_config["loop_count"],
         model_name=model_name,
-        task=task,
+        task=evaluate_task,
         language=language,
-        path=score_dir / f"{model_name}_{task}_{language}_scores.csv",
+        path=score_dir / f"{model_name}_{evaluate_task}_{language}_scores.csv",
     )
 
 
@@ -150,6 +214,7 @@ def main():
     )
     set_proxy()
     logging.info("Proxy set up")
+
     # set the basic accelerate environment on mutil-gpu
     write_basic_config(mixed_precision="fp16")
     with open(
@@ -172,11 +237,12 @@ def main():
         logging.info(msg="Wandb is disabled")
         os.environ["WANDB_MODE"] = "dryrun"
         wandb.init(mode="disabled")
-    reverse_process = get_process(run_config["language"], stage="reverse")
     for run_task in run_config["task_list"]:
-        evaluate_task(run_config, run_task, reverse_process)
+        start_evaluation(run_config, run_task)
     wandb.finish()
     close_proxy()
+    logging.info("Proxy closed")
+
 
 
 if __name__ == "__main__":

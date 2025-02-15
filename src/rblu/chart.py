@@ -18,7 +18,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.manifold import TSNE
 
 from rblu.data_load import load_qa
-from rblu.path import chart_dir, project_dir, result_dir, score_dir
+from rblu.utils.path import chart_dir, project_dir, result_dir, score_dir
 
 
 def text2tsne(texts_list, languge, task, model):
@@ -491,8 +491,8 @@ def draw_score(
         fig.supxlabel("Round")
         fig.supylabel("Score")
         if output_dir is None:
-            chart_output_dir = chart_dir / chart_type
-        os.makedirs(chart_output_dir, exist_ok=True)
+            output_dir = chart_dir / chart_type
+        os.makedirs(output_dir, exist_ok=True)
         # output legend
 
         ax = axs.flat[0]
@@ -504,12 +504,12 @@ def draw_score(
             for label in labels
         ]
         fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
-        legend_path = chart_output_dir / f"legend.{suffix}"
+        legend_path = output_dir / f"legend.{suffix}"
 
         fig_legend.savefig(legend_path, bbox_inches="tight")
         plt.close(fig_legend)
         output_path = (
-            chart_output_dir / f"{chart_type}_{mode}_combined_plots.{suffix}"
+            output_dir / f"{chart_type}_{mode}_combined_plots.{suffix}"
         )  # noqa: F821
         plt.savefig(output_path, bbox_inches="tight")
         logging.info("Saved the chart to %s", output_path)
@@ -520,8 +520,8 @@ def draw_length_distribution(config) -> None:
         all_questions = {}
         for task in ["medical", "financial", "legal"]:
             original_questions, _ = load_qa(
-                lang=lang,
-                task_name=task,
+                data_language=lang,
+                data_task=task,
                 count=config["data"]["doc_count"],
                 min_length=config["data"]["min_length"],
                 max_length=config["data"]["max_length"],
@@ -628,7 +628,6 @@ def main():
     )
     draw_length_distribution(config=config)
     draw_tsne(config=config, suffix=args.suffix)
-    logging.info()
 
 if __name__ == "__main__":
     main()

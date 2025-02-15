@@ -22,5 +22,7 @@
     ],
     "rewrap.autoWrap.enabled": true,
     "mypy-type-checker.importStrategy": "fromEnvironment",
-    "terminal.integrated.fontFamily": "monospace"
+    "terminal.integrated.fontFamily": "monospace",
+    "isort.check": true,
+    "isort.importStrategy": "fromEnvironment"
 }

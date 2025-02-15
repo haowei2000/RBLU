@@ -2,9 +2,11 @@ wandb: False # use wandb to log the results
 force_regenerate: True
 # forced to regenerate the data even if the result file exists
 
+# stage: reverse/reservation
+stage: reservation
 
 # the language and task for the data generation. please make sure to provide the correct dataset
-language: zh
+language: en
 language_list:
 - zh
 - en
@@ -18,12 +20,14 @@ model_list:
 - llama
 - glm
 - qwen
+- gpt-4o-mini
 model:
-  model_name: glm
+  model_name: gpt-4o-mini
   model_path:
     llama: /public/model/hub/LLM-Research/Meta-Llama-3-1-8B-Instruct/
     glm: /root/.cache/modelscope/hub/ZhipuAI/glm-4-9b-chat-hf/
     qwen: /public/model/hub/qwen/
+    gpt-4o-mini: api--https://api.gptapi.us/v1/chat/completions--gpt-4o-mini--null
 
 batch_size: 8
 
@@ -32,6 +36,7 @@ batch_size: 8
 loop_count: 5
 data:
   doc_count: 500
+
   min_length: 1
   max_length: 2000
 tokenizer_kwargs:
@@ -40,7 +45,7 @@ tokenizer_kwargs:
   truncation: True
   add_special_tokens: True
 gen_kwargs:
-  max_new_tokens: 1000
+  max_new_tokens: 500
 
 # chart config
 color_family:

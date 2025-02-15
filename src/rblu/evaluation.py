@@ -6,195 +6,22 @@ which is the main class for evaluating the model.
 import logging
 import time
 from collections.abc import Callable
+
 import pandas as pd
 import torch
 from datasets import Dataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import (
-    BatchEncoding,
-    PreTrainedTokenizer,
-    PreTrainedTokenizerFast,
-)
 
-from rblu.process import Process
-
-
-class TokenizedDataset(torch.utils.data.Dataset):
-    """
-    TokenizedDataset is a custom dataset class
-    for handling tokenized input data.
-
-    Attributes:
-        input_ids (list or tensor): A list or tensor
-        containing the tokenized input IDs.
-        attention_masks (list or tensor): A list or tensor containing
-        the attention masks corresponding to the input IDs.
-
-    Methods:
-        __len__(): Returns the number of samples in the dataset.
-        __getitem__(idx): Returns a dictionary containing the input IDs
-        and attention mask for the given index.
-    """
-
-    def __init__(self, input_ids, attention_masks):
-        super().__init__()
-        self.input_ids = input_ids
-        self.attention_masks = attention_masks
-
-    def __len__(self):
-        return len(self.input_ids)
-
-    def __getitem__(self, idx):
-        return {
-            "input_ids": self.input_ids[idx],
-            "attention_mask": self.attention_masks[idx],
-        }
-
-
-class MyGenerator:
-    """
-    a class that with batch and chat template
-    generates responses based on the given model and tokenizer
-    """
-
-    def __init__(
-        self,
-        model,
-        tokenizer,
-        batch_size,
-        apply_template,
-        tokenizer_kwargs,
-        gen_kwargs,
-    ) -> None:
-        """
-        Initializes the generator class with the given parameters.
-
-        Args:
-            model:
-                The model to be evaluated.
-            tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast):
-                The tokenizer associated with the model.
-            batch_size (int):
-                The number of samples to process in a batch.
-            apply_template (Optional[Callable[[str], list[dict]]]):
-                A function to apply a template to the input data.
-            gen_kwargs (dict):
-                Additional keyword arguments for the generation.
-
-        Returns:
-            None
-        """
-        self.model = model
-        self.tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast = (
-            tokenizer
-        )
-        self.batch_size = batch_size
-        self.apply_template: Callable[[str], list[dict]] | None = (
-            apply_template
-        )
-        self.tokenizer_kwargs = tokenizer_kwargs
-        self.gen_kwargs = gen_kwargs
-        try:
-            self.device = next(model.parameters()).device
-        except StopIteration as e:
-            raise ValueError("The model does not have any parameters.") from e
-
-    def __call__(self, text_list: list[str]) -> list[str]:
-        """
-        Generates responses for a list of input texts using the model.
-
-        Args:
-            text_list (list[str]):
-                A list of input texts to be processed.
-
-        Returns:
-            list[str]: A list of generated responses corresponding to
-            the input texts.
-
-        This method performs the following steps:
-        1. Tokenize the input texts.
-        2. Converts the tokenized texts to the appropriate device.
-        3. Creates a dataset and dataloader for batch processing.
-        4. Generates responses using the model in a batched manner.
-        5. Decodes the generated token IDs to strings.
-        6. Measures and prints the time taken for the batch generation.
-        """
-        start_time = time.time()
-        batch_encoding = self._tokenize_texts(text_list)
-        dataset = TokenizedDataset(
-            batch_encoding["input_ids"],
-            batch_encoding["attention_mask"],
-        )
-        dataloader = DataLoader(
-            dataset=dataset, batch_size=self.batch_size, shuffle=False
-        )
-
-        responses = []
-        for inputs in tqdm(dataloader, desc="Generating responses"):
-            with torch.no_grad():
-                inputs = {
-                    key: tensor.to(self.device)
-                    for key, tensor in inputs.items()
-                }
-                outputs = self.model.generate(**inputs, **self.gen_kwargs)
-                decoded_outputs = self.tokenizer.batch_decode(
-                    outputs[:, inputs["input_ids"].size(1) :],
-                    skip_special_tokens=True,
-                )
-                responses.extend(decoded_outputs)
-
-        logging.info(
-            "Time taken for batch gen: {:.2f} seconds".format(
-                time.time() - start_time
-            )
-        )
-        return responses
-
-    def _tokenize_texts(self, text_list: list[str]) -> BatchEncoding:
-        """
-        Tokenize a list of texts using the specified tokenizer.
-        If a template is applied, it uses the `apply_chat_template`
-        method of the tokenizer with additional options.
-        Otherwise, it uses the `batch_encode_plus` method.
-
-        Args:
-            text_list (list[str]): A list of texts to be tokenized.
-
-        Returns:
-            BatchEncoding: The tokenized representation of the input
-            texts.
-
-        Raises:
-            TypeError: If the returned type from `apply_chat_template`
-            is not `BatchEncoding`.
-        """
-        if self.apply_template is not None:
-            text_formatted_list = [
-                self.apply_template(text) for text in text_list
-            ]
-            text_templated_list = self.tokenizer.apply_chat_template(
-                text_formatted_list,
-                tokenize=False,
-                add_generation_prompt=True,
-            )
-        else:
-            text_templated_list = [text_list]
-        tokenized_batch = self.tokenizer.batch_encode_plus(
-            text_templated_list,  # type: ignore
-            return_tensors="pt",
-            **self.tokenizer_kwargs,
-        )
-        if not isinstance(tokenized_batch, BatchEncoding):
-            raise TypeError("The tokenized_batch is not `BatchEncoding`.")
-        return tokenized_batch
+from rblu.process.reservation_process import ReservationProcess
+from rblu.process.reverse_process import ReverseProcess
 
 
 def reverse_infer(
     generator: Callable[[list[str]], list[str]],
     original_questions: list[str],
     loop_count: int,
-    process: Process,
+    reverse_process: ReverseProcess,
 ) -> Dataset:
     """
     Evaluates the model using the given generator function and process.
@@ -210,39 +37,71 @@ def reverse_infer(
     """
     qa_dataset = Dataset.from_dict({"q0": original_questions})
     for loop in range(loop_count):
-        logging.info("Loop: %d".format(loop))
+        logging.info("Loop %i", loop)
         qa_dataset = qa_dataset.map(
-            process.question_prompt, fn_kwargs={"loop": loop}
+            reverse_process.question_prompt, fn_kwargs={"loop": loop}
         )
         qa_dataset = qa_dataset.add_column(
             name=f"a{loop}_output",
             column=generator(qa_dataset[f"q{loop}_prompt"]),
         )
         qa_dataset = qa_dataset.map(
-            process.answer_extract, fn_kwargs={"loop": loop}
-        ).map(process.answer_prompt, fn_kwargs={"loop": loop})
+            reverse_process.answer_extract, fn_kwargs={"loop": loop}
+        ).map(reverse_process.answer_prompt, fn_kwargs={"loop": loop})
         qa_dataset = qa_dataset.add_column(
             name=f"q{loop + 1}_output",
             column=generator(qa_dataset[f"a{loop}_prompt"]),
         )
         qa_dataset = qa_dataset.map(
-            process.question_extract, fn_kwargs={"loop": loop}
+            reverse_process.question_extract, fn_kwargs={"loop": loop}
         )
     return qa_dataset
 
 
-# TODO: Implement conservation_infer function
 def conservation_infer(
     generator: Callable[[list[str]], list[str]],
     original_questions: list[str],
     loop_count: int,
-    process: Process,
+    reservation_process: ReservationProcess,
 ):
     """
     Evaluates the conservation ability of a model
     using the given generator function and process.
     """
-    pass
+    qa_dataset = Dataset.from_dict({"q0": original_questions})
+    for loop in range(loop_count):
+        logging.info("Loop %i", loop)
+        # add the prompt for ask for the answer
+        qa_dataset = qa_dataset.map(
+            reservation_process.ask,
+            fn_kwargs={"loop": loop, "new_column": f"q{loop}_prompt2ask"},
+        )
+        # generate the answer
+        qa_dataset = qa_dataset.add_column(
+            name=f"a{loop}_unextracted",
+            column=generator(qa_dataset[f"q{loop}_prompt2ask"]),
+        )
+        # extract the answer from the generated answer
+        qa_dataset = qa_dataset.map(
+            reservation_process.ask_extract,
+            fn_kwargs={"loop": loop, "new_column": f"a{loop}"},
+        )
+        # add the prompt for rephrasing the question
+        qa_dataset = qa_dataset.map(
+            reservation_process.prompt_rephrase,
+            fn_kwargs={"loop": loop, "new_column": f"q{loop}_prompt2rephrase"},
+        )
+        # generate the rephrased question
+        qa_dataset = qa_dataset.add_column(
+            name=f"q{loop + 1}_unextracted",
+            column=generator(qa_dataset[f"q{loop}_prompt2rephrase"]),
+        )
+        # extract the question from the generated question
+        qa_dataset = qa_dataset.map(
+            reservation_process.extract_rephrase,
+            fn_kwargs={"loop": loop, "new_column": f"q{loop + 1}"},
+        )
+    return qa_dataset
 
 
 def get_score(
