@@ -3,7 +3,6 @@ a script to load data from different sources and save it to csv
 folder path is src/rblu/data
 """
 
-
 import matplotlib.pyplot as plt
 import pandas as pd
 from datasets import Dataset, load_dataset

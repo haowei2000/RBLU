@@ -1,9 +1,10 @@
 import os
+
 from openai import OpenAI
 
-
 client = OpenAI(
-    base_url="https://www.gptapi.us/v1/chat/completions", api_key=os.getenv("GPTAPI_KEY")
+    base_url="https://www.gptapi.us/v1/chat/completions",
+    api_key=os.getenv("GPTAPI_KEY"),
 )
 
 completion = client.chat.completions.create(

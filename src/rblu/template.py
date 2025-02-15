@@ -1,4 +1,3 @@
-
 def apply_template(user_input: str, system_content: str) -> list:
     return [
         {"role": "system", "content": system_content},

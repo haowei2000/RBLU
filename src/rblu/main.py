@@ -6,25 +6,23 @@ from pathlib import Path
 
 import datasets
 import torch
+import wandb
 import yaml
 from accelerate.utils import write_basic_config
 from pandas import DataFrame
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-import wandb
 from rblu.data_load import load_qa
 from rblu.evaluation import conservation_infer, reverse_infer, save_score
 from rblu.generate import APIGenerator, MyGenerator
 from rblu.metric import rouge_and_bert
+from rblu.process.reservation_process import (ReservationProcess,
+                                              get_reservation_process)
+from rblu.process.reverse_process import ReverseProcess, get_reverse_process
+from rblu.template import apply_default_template, apply_default_zh_template
 from rblu.utils.api import parse_api
 from rblu.utils.path import result_dir, score_dir
 from rblu.utils.proxy import close_proxy, set_proxy
-from rblu.process.reverse_process import ReverseProcess, get_reverse_process
-from rblu.process.reservation_process import (
-    ReservationProcess,
-    get_reservation_process,
-)
-from rblu.template import apply_default_template, apply_default_zh_template
 
 
 def create_generator(config: dict) -> APIGenerator | MyGenerator:
@@ -242,7 +240,6 @@ def main():
     wandb.finish()
     close_proxy()
     logging.info("Proxy closed")
-
 
 
 if __name__ == "__main__":

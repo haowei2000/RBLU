@@ -88,7 +88,6 @@ class Tsne:
         output_df.to_parquet(self.path, index=False)
         return self.doc_count, X_tsne
 
-
     def read(self):
         if self.path.exists() is False:
             self.write_and_tsne()
@@ -628,6 +627,7 @@ def main():
     )
     draw_length_distribution(config=config)
     draw_tsne(config=config, suffix=args.suffix)
+
 
 if __name__ == "__main__":
     main()
