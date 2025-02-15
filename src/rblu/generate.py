@@ -231,7 +231,7 @@ class APIGenerator:
             {"role": "user", "content": input},
         ]
         url = "https://api.agicto.cn/v1"
-        key = "sk-mAhs9JMhHymnzgnjlJ1jaGj7dUhdGAHxOfFd8QHoZaT76btY"
+        key = ""
         model = "deepseek-r1"
         return self.openai_generate(url, key, model, messages).split(
             "</think>\n\n"
