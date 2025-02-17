@@ -10,6 +10,7 @@ import torch
 import yaml
 from accelerate.utils import write_basic_config
 from pandas import DataFrame
+from pymongo.collection import Collection as MongoCollection
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 import wandb
@@ -17,8 +18,10 @@ from rblu.data_load import load_qa
 from rblu.evaluation import conservation_infer, reverse_infer, save_score
 from rblu.generate import APIGenerator, MyGenerator
 from rblu.metric import rouge_and_bert
-from rblu.process.reservation_process import (ReservationProcess,
-                                              get_reservation_process)
+from rblu.process.reservation_process import (
+    ReservationProcess,
+    get_reservation_process,
+)
 from rblu.process.reverse_process import ReverseProcess, get_reverse_process
 from rblu.template import apply_default_template, apply_default_zh_template
 from rblu.utils.api import parse_api
@@ -27,21 +30,25 @@ from rblu.utils.proxy import close_proxy, set_proxy
 
 
 def create_generator(
-    model_name, model_checkpoint, task, language, stage, backup_mongodb
+    language: str,
+    model_name: str,
+    model_checkpoint: str | dict,
+    backup_mongodb: MongoCollection,
 ) -> APIGenerator | MyGenerator:
     """
-    Creates a generator object based on the provided configuration.
-
-    This function determines whether to use an API generator or a local
-    generator based on the 'model_checkpoint' value in the configuration. If the
-    'model_checkpoint' is "api", it creates an APIGenerator. Otherwise, it
-    creates a local generator using the '_get_local_generator' helper function.
+    Creates a generator instance based on the provided model checkpoint.
 
     Args:
-        config (dict): Configuration dictionary containing model information.
+        model_name (str): The name of the model. model_checkpoint (str | dict):
+        The checkpoint information for the model.
+            Can be a string representing a local checkpoint or a dictionary with
+            API details.
+        backup_mongodb (MongoCollection):
+        A MongoDB collection used for backup.
 
     Returns:
-        Generator: An instance of either APIGenerator or MyGenerator.
+        APIGenerator | MyGenerator: An instance of either APIGenerator or
+        MyGenerator based on the type of model checkpoint provided.
     """
     model_name = model_name
     model_checkpoint = model_checkpoint
@@ -55,9 +62,6 @@ def create_generator(
             model_name,
             mongodb=backup_mongodb,
             query_model_name=model_name,
-            query_stage=stage,
-            query_language=language,
-            query_task=task,
         )
     if (
         "key" not in model_checkpoint.keys()
@@ -70,23 +74,34 @@ def create_generator(
         key=model_checkpoint["key"],
         mongodb=backup_mongodb,
         query_model_name=model_name,
-        query_stage=stage,
-        query_language=language,
-        query_task=task,
     )
 
 
 def _get_local_generator(
-    model_checkpoint,
-    model_name,
-    backup_mongodb,
-    language,
-    stage,
-    task,
-    batch_size,
-    gen_kwargs,
-    tokenizer_kwargs,
+    model_checkpoint: str,
+    model_name: str,
+    language: str,
+    batch_size: int,
+    backup_mongodb: MongoCollection,
+    gen_kwargs: dict,
+    tokenizer_kwargs: dict,
 ) -> MyGenerator:
+    """
+    Initializes and returns a MyGenerator instance with the specified
+    parameters.
+
+    Args:
+        model_checkpoint (str): Path to the model checkpoint. model_name (str):
+        Name of the model. language (str): Language code (e.g., 'zh' for
+        Chinese). batch_size (int): Batch size for processing.
+        backup_mongodb (MongoCollection): MongoDB collection for backup.
+        gen_kwargs (dict): Additional keyword arguments for the generator.
+        tokenizer_kwargs (dict): Additional keyword arguments for the tokenizer.
+
+    Returns:
+        MyGenerator: An instance of MyGenerator initialized with the specified
+        parameters.
+    """
     apply_template = (
         apply_default_zh_template
         if language == "zh"
@@ -116,9 +131,6 @@ def _get_local_generator(
         gen_kwargs=gen_kwargs,
         backup_mongodb=backup_mongodb,
         query_model_name=model_name,
-        query_stage=stage,
-        query_language=language,
-        query_task=task,
     )
 
 
@@ -190,10 +202,8 @@ def start_evaluation(
         ]
         generator = create_generator(
             model_name=model_name,
-            model_checkpoint=config["model"]["model_checkpoint"],
-            task=evaluate_task,
+            model_checkpoint=config["model"]["model_path"][model_name],
             language=language,
-            stage=config["stage"],
             backup_mongodb=backup_db,
         )
         match config["stage"]:

@@ -11,55 +11,81 @@ from time import time
 import torch
 from accelerate import Accelerator
 from openai import OpenAI
+from pymongo.collection import Collection as MongoCollection
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as TorchDataset
 from tqdm import tqdm
-from transformers import (
-    BatchEncoding,
-    PreTrainedTokenizer,
-    PreTrainedTokenizerFast,
-)
-from pymongo.collection import Collection as MongoCollection
+from transformers import (BatchEncoding, PreTrainedTokenizer,
+                          PreTrainedTokenizerFast)
 
 
 class BackupGenerate:
+    """
+    A class that generates responses based on the given model and tokenizer
+    """
+
     def __init__(
         self,
         backup_mongodb: MongoCollection,
         query_model_name: str,
-        query_stage: str,
-        query_language: str,
-        query_task: str,
     ):
+        """
+        Initialize the generator with a MongoDB collection and a model name.
+        Args:
+            backup_mongodb (MongoCollection): The MongoDB collection to use for
+            backup. query_model_name (str): The name of the query model.
+        """
         self.mongodb = backup_mongodb
-        self.query = {
-            "model_name": query_model_name,
-            "stage": query_stage,
-            "language": query_language,
-            "task": query_task,
-        }
+        self.model_name = query_model_name
 
     def generate(self, text_list: list[str]) -> list[str]:
+        """
+        Generates responses for the given list of texts.
+
+        Args:
+            text_list (list[str]): A list of input texts.
+
+        Returns:
+            list[str]: The input text_list itself. This method acts as a
+            placeholder and should be overridden by subclasses.
+        """
         return text_list
 
-    def backup_generate(self, input: str) -> str:
-        if search_result := self.mongodb.find_one(
-            self.query | {"input": input}
-        ):
-            output = search_result["output"]
-        else:
-            output = self.select_generate(input)
-            self.mongodb.insert_one(
-                self.query | {"input": input, "output": output}
+    def find_in_backup(self, input: str) -> str:
+        """
+        Finds a response in the backup MongoDB collection based on the given input.
+
+        Args:
+            input (str): The input text to search for.
+
+        Returns:
+            str: The corresponding output if found in the backup, otherwise None.
+        """
+        return (
+            search_result["output"]
+            if (
+                search_result := self.mongodb.find_one(
+                    {"input": input, "model_name": self.model_name}
+                )
             )
-        return output
+            else None
+        )
 
     def __call__(self, text_list: list[str]) -> list[str]:
+        """
+        Generates responses for the given list of texts, utilizing a backup mechanism.
+
+        Args:
+            text_list (list[str]): A list of input texts.
+
+        Returns:
+            list[str]: A list of generated responses.
+        """
         response_list = [None] * len(text_list)
         unexisting_texts = []
         for i, text in enumerate(text_list):
-            if self.backup_generate(text) is not None:
-                response_list[i] = self.backup_generate(text)
+            if self.find_in_backup(text) is not None:
+                response_list[i] = self.find_in_backup(text)
             else:
                 unexisting_texts.append((i, text))
         logging.info(
@@ -72,6 +98,13 @@ class BackupGenerate:
         )
         for i, response in enumerate(responses_generated):
             response_list[unexisting_texts[i][0]] = response
+            self.mongodb.insert_one(
+                {
+                    "model_name": self.model_name,
+                    "input": unexisting_texts[i][1],
+                    "output": response,
+                }
+            )
         if None in response_list:
             raise ValueError("Some responses were not generated.")
         return response_list
@@ -125,9 +158,6 @@ class MyGenerator(BackupGenerate):
         gen_kwargs,
         backup_mongodb,
         query_model_name,
-        query_stage,
-        query_language,
-        query_task,
     ) -> None:
         """
         Initializes the generator class with the given parameters.
@@ -150,9 +180,6 @@ class MyGenerator(BackupGenerate):
         super().__init__(
             backup_mongodb=backup_mongodb,
             query_model_name=query_model_name,
-            query_stage=query_stage,
-            query_language=query_language,
-            query_task=query_task,
         )
         self.model = model
         self.tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast = (
@@ -268,16 +295,10 @@ class APIGenerator(BackupGenerate):
         key: str,
         mongodb,
         query_model_name,
-        query_stage,
-        query_language,
-        query_task,
     ):
         super().__init__(
             backup_mongodb=mongodb,
             query_model_name=query_model_name,
-            query_stage=query_stage,
-            query_language=query_language,
-            query_task=query_task,
         )
         self.api_model_name = model_name
         self.url = url
@@ -287,6 +308,18 @@ class APIGenerator(BackupGenerate):
     def openai_generate(
         url: str, key: str, model_name: str, messages: list[dict]
     ):
+        """
+        Generates text using the OpenAI API with retry mechanism.
+
+        Args:
+            url (str): The base URL for the OpenAI API.
+            key (str): The API key for authentication.
+            model_name (str): The name of the OpenAI model to use.
+            messages (list[dict]): The list of messages for the conversation.
+
+        Returns:
+            str: The generated text content.
+        """
         client = OpenAI(base_url=url, api_key=key)
         while True:
             try:
@@ -302,6 +335,18 @@ class APIGenerator(BackupGenerate):
                 continue
 
     def select_generate(self, input: str) -> str:
+        """
+        Selects the appropriate generation method based on the API model name.
+
+        Args:
+            input (str): The input text for generation.
+
+        Returns:
+            str: The generated response.
+
+        Raises:
+            ValueError: If the API model name is invalid.
+        """
         start_time = time()
         response = None
         match self.api_model_name:
@@ -317,6 +362,15 @@ class APIGenerator(BackupGenerate):
         return response
 
     def _deepseekR1_generate(self, input: str):
+        """
+        Generates text using the DeepseekR1 model via the OpenAI API.
+
+        Args:
+            input (str): The input text for generation.
+
+        Returns:
+            str: The generated text content.
+        """
         logging.info("Using DeepseekR1 model")
         messages = [
             {
@@ -333,6 +387,15 @@ class APIGenerator(BackupGenerate):
         )[-1]
 
     def _chatgpt_generate(self, input: str) -> str:
+        """
+        Generates text using the ChatGPT model via the OpenAI API.
+
+        Args:
+            input (str): The input text for generation.
+
+        Returns:
+            str: The generated text content.
+        """
         messages = [
             {"role": "developer", "content": "You are a helpful assistant."},
             {"role": "user", "content": input},
@@ -342,6 +405,16 @@ class APIGenerator(BackupGenerate):
         )
 
     def generate(self, text_list: list[str]) -> list[str]:
+        """
+        Generates responses for a list of input texts using the selected API
+        model.
+
+        Args:
+            text_list (list[str]): A list of input texts.
+
+        Returns:
+            list[str]: A list of generated responses.
+        """
         responses = []
         responses.extend(
             self.select_generate(text)
