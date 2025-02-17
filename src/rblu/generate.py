@@ -53,13 +53,15 @@ class BackupGenerate:
 
     def find_in_backup(self, input: str) -> str:
         """
-        Finds a response in the backup MongoDB collection based on the given input.
+        Finds a response in the backup MongoDB collection based on the given
+        input.
 
         Args:
             input (str): The input text to search for.
 
         Returns:
-            str: The corresponding output if found in the backup, otherwise None.
+            str: The corresponding output if found in the backup, otherwise
+            None.
         """
         return (
             search_result["output"]
@@ -73,7 +75,8 @@ class BackupGenerate:
 
     def __call__(self, text_list: list[str]) -> list[str]:
         """
-        Generates responses for the given list of texts, utilizing a backup mechanism.
+        Generates responses for the given list of texts, utilizing a backup
+        mechanism.
 
         Args:
             text_list (list[str]): A list of input texts.

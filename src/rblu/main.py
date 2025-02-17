@@ -34,6 +34,9 @@ def create_generator(
     model_name: str,
     model_checkpoint: str | dict,
     backup_mongodb: MongoCollection,
+    batch_size:int,
+    gen_kwargs: dict,
+    tokenizer_kwargs: dict,
 ) -> APIGenerator | MyGenerator:
     """
     Creates a generator instance based on the provided model checkpoint.
@@ -60,8 +63,11 @@ def create_generator(
         return _get_local_generator(
             model_checkpoint,
             model_name,
-            mongodb=backup_mongodb,
-            query_model_name=model_name,
+            backup_mongodb=backup_mongodb,
+            language=language,
+            batch_size=batch_size,
+            gen_kwargs=gen_kwargs,
+            tokenizer_kwargs=tokenizer_kwargs,
         )
     if (
         "key" not in model_checkpoint.keys()
@@ -205,6 +211,9 @@ def start_evaluation(
             model_checkpoint=config["model"]["model_path"][model_name],
             language=language,
             backup_mongodb=backup_db,
+            batch_size=config["batch_size"],
+            gen_kwargs=config["gen_kwargs"],
+            tokenizer_kwargs=config["tokenizer_kwargs"],
         )
         match config["stage"]:
             case "reverse":

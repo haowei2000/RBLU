@@ -47,7 +47,7 @@ def extract_en_rephrase(example: dict, loop: int, new_column: str) -> dict:
         example,
         loop,
         new_column,
-        "rephrased",
+        "rephrase",
     )
 
 
