@@ -4,6 +4,7 @@ which is the main class for evaluating the model.
 """
 
 import logging
+from pathlib import Path
 import time
 from collections.abc import Callable
 
@@ -76,6 +77,7 @@ def conservation_infer(
             reservation_process.ask,
             fn_kwargs={"loop": loop, "new_column": f"q{loop}_prompt2ask"},
         )
+
         # generate the answer
         qa_dataset = qa_dataset.add_column(
             name=f"a{loop}_unextracted",
@@ -100,6 +102,11 @@ def conservation_infer(
         qa_dataset = qa_dataset.map(
             reservation_process.extract_rephrase,
             fn_kwargs={"loop": loop, "new_column": f"q{loop + 1}"},
+        )
+        # Save intermediate results to CSV
+        intermediate_path = Path(f"intermediate_results_loop_{loop}.json")
+        qa_dataset.to_json(
+            intermediate_path, orient="records", lines=True, force_ascii=False
         )
     return qa_dataset
 
@@ -158,7 +165,7 @@ def save_score(
     model_name,
     task,
     language,
-    path,
+    path: Path | str,
 ):
     """Save the score to the disk."""
     scores = []
@@ -177,5 +184,8 @@ def save_score(
                 score["language"] = language
                 scores.append(score)
     df = pd.DataFrame(scores)
+    if isinstance(path, str):
+        path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(path, index=False)
     return df

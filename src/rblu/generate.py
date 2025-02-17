@@ -14,8 +14,67 @@ from openai import OpenAI
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as TorchDataset
 from tqdm import tqdm
-from transformers import (BatchEncoding, PreTrainedTokenizer,
-                          PreTrainedTokenizerFast)
+from transformers import (
+    BatchEncoding,
+    PreTrainedTokenizer,
+    PreTrainedTokenizerFast,
+)
+from pymongo.collection import Collection as MongoCollection
+
+
+class BackupGenerate:
+    def __init__(
+        self,
+        backup_mongodb: MongoCollection,
+        query_model_name: str,
+        query_stage: str,
+        query_language: str,
+        query_task: str,
+    ):
+        self.mongodb = backup_mongodb
+        self.query = {
+            "model_name": query_model_name,
+            "stage": query_stage,
+            "language": query_language,
+            "task": query_task,
+        }
+
+    def generate(self, text_list: list[str]) -> list[str]:
+        return text_list
+
+    def backup_generate(self, input: str) -> str:
+        if search_result := self.mongodb.find_one(
+            self.query | {"input": input}
+        ):
+            output = search_result["output"]
+        else:
+            output = self.select_generate(input)
+            self.mongodb.insert_one(
+                self.query | {"input": input, "output": output}
+            )
+        return output
+
+    def __call__(self, text_list: list[str]) -> list[str]:
+        response_list = [None] * len(text_list)
+        unexisting_texts = []
+        for i, text in enumerate(text_list):
+            if self.backup_generate(text) is not None:
+                response_list[i] = self.backup_generate(text)
+            else:
+                unexisting_texts.append((i, text))
+        logging.info(
+            "Number of responses to generate: %i (and %i existing in db)",
+            len(unexisting_texts),
+            len(text_list) - len(unexisting_texts),
+        )
+        responses_generated = self.generate(
+            [text for _, text in unexisting_texts]
+        )
+        for i, response in enumerate(responses_generated):
+            response_list[unexisting_texts[i][0]] = response
+        if None in response_list:
+            raise ValueError("Some responses were not generated.")
+        return response_list
 
 
 class TokenizedDataset(TorchDataset):
@@ -50,7 +109,7 @@ class TokenizedDataset(TorchDataset):
         }
 
 
-class MyGenerator:
+class MyGenerator(BackupGenerate):
     """
     a class that with batch and chat template
     generates responses based on the given model and tokenizer
@@ -64,6 +123,11 @@ class MyGenerator:
         apply_template,
         tokenizer_kwargs,
         gen_kwargs,
+        backup_mongodb,
+        query_model_name,
+        query_stage,
+        query_language,
+        query_task,
     ) -> None:
         """
         Initializes the generator class with the given parameters.
@@ -83,6 +147,13 @@ class MyGenerator:
         Returns:
             None
         """
+        super().__init__(
+            backup_mongodb=backup_mongodb,
+            query_model_name=query_model_name,
+            query_stage=query_stage,
+            query_language=query_language,
+            query_task=query_task,
+        )
         self.model = model
         self.tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast = (
             tokenizer
@@ -101,7 +172,7 @@ class MyGenerator:
         except StopIteration as e:
             raise ValueError("The model does not have any parameters.") from e
 
-    def __call__(self, text_list: list[str]) -> list[str]:
+    def generate(self, text_list: list[str]) -> list[str]:
         """
         Generates responses for a list of input texts using the model.
 
@@ -189,8 +260,25 @@ class MyGenerator:
         return tokenized_batch
 
 
-class APIGenerator:
-    def __init__(self, url: str, model_name: str, key: str):
+class APIGenerator(BackupGenerate):
+    def __init__(
+        self,
+        url: str,
+        model_name: str,
+        key: str,
+        mongodb,
+        query_model_name,
+        query_stage,
+        query_language,
+        query_task,
+    ):
+        super().__init__(
+            backup_mongodb=mongodb,
+            query_model_name=query_model_name,
+            query_stage=query_stage,
+            query_language=query_language,
+            query_task=query_task,
+        )
         self.api_model_name = model_name
         self.url = url
         self.key = key
@@ -200,19 +288,26 @@ class APIGenerator:
         url: str, key: str, model_name: str, messages: list[dict]
     ):
         client = OpenAI(base_url=url, api_key=key)
-        completion = client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-        )
-        return completion.choices[0].message.content
+        while True:
+            try:
+                completion = client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                )
+                return completion.choices[0].message.content
+            except (ConnectionError, TimeoutError) as e:
+                logging.warning(
+                    "Connection error occurred: %s. Retrying...", e
+                )
+                continue
 
-    def generate(self, input: str) -> str:
+    def select_generate(self, input: str) -> str:
         start_time = time()
         response = None
         match self.api_model_name:
             case "deepseekR1":
                 response = self._deepseekR1_generate(input)
-            case "gpt" if "gpt" in self.api_model_name:
+            case _ if "gpt" in self.api_model_name:
                 response = self._chatgpt_generate(input)
             case _:
                 raise ValueError("Invalid model name")
@@ -240,16 +335,16 @@ class APIGenerator:
     def _chatgpt_generate(self, input: str) -> str:
         messages = [
             {"role": "developer", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Hello!"},
+            {"role": "user", "content": input},
         ]
         return self.openai_generate(
             self.url, self.key, self.api_model_name, messages
         )
 
-    def __call__(self, text_list: list[str]) -> list[str]:
+    def generate(self, text_list: list[str]) -> list[str]:
         responses = []
         responses.extend(
-            self.generate(text)
+            self.select_generate(text)
             for text in tqdm(text_list, desc="Generating responses")
         )
         return responses

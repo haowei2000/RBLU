@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 import datasets
+import pymongo
 import torch
 import yaml
 from accelerate.utils import write_basic_config
@@ -16,18 +17,18 @@ from rblu.data_load import load_qa
 from rblu.evaluation import conservation_infer, reverse_infer, save_score
 from rblu.generate import APIGenerator, MyGenerator
 from rblu.metric import rouge_and_bert
+from rblu.process.reservation_process import (ReservationProcess,
+                                              get_reservation_process)
+from rblu.process.reverse_process import ReverseProcess, get_reverse_process
+from rblu.template import apply_default_template, apply_default_zh_template
 from rblu.utils.api import parse_api
 from rblu.utils.path import result_dir, score_dir
 from rblu.utils.proxy import close_proxy, set_proxy
-from rblu.process.reverse_process import ReverseProcess, get_reverse_process
-from rblu.process.reservation_process import (
-    ReservationProcess,
-    get_reservation_process,
-)
-from rblu.template import apply_default_template, apply_default_zh_template
 
 
-def create_generator(config: dict) -> APIGenerator | MyGenerator:
+def create_generator(
+    model_name, model_checkpoint, task, language, stage, backup_mongodb
+) -> APIGenerator | MyGenerator:
     """
     Creates a generator object based on the provided configuration.
 
@@ -42,16 +43,50 @@ def create_generator(config: dict) -> APIGenerator | MyGenerator:
     Returns:
         Generator: An instance of either APIGenerator or MyGenerator.
     """
-    model_name = config["model"]["model_name"]
-    model_checkpoint = config["model"]["model_path"][model_name]
-    if model_checkpoint.startswith("api--"):
-        return APIGenerator(**parse_api(model_checkpoint))
-    else:
-        return _get_local_generator(config, model_checkpoint, model_name)
+    model_name = model_name
+    model_checkpoint = model_checkpoint
+
+    if (
+        not isinstance(model_checkpoint, dict)
+        or model_checkpoint["type"] != "api"
+    ):
+        return _get_local_generator(
+            model_checkpoint,
+            model_name,
+            mongodb=backup_mongodb,
+            query_model_name=model_name,
+            query_stage=stage,
+            query_language=language,
+            query_task=task,
+        )
+    if (
+        "key" not in model_checkpoint.keys()
+        or model_checkpoint["key"] == "envs"
+    ):
+        model_checkpoint["key"] = os.getenv("GPTAPI_KEY")
+    return APIGenerator(
+        url=model_checkpoint["url"],
+        model_name=model_checkpoint["model_name"],
+        key=model_checkpoint["key"],
+        mongodb=backup_mongodb,
+        query_model_name=model_name,
+        query_stage=stage,
+        query_language=language,
+        query_task=task,
+    )
 
 
-def _get_local_generator(config, model_checkpoint, model_name):
-    language = config["language"]
+def _get_local_generator(
+    model_checkpoint,
+    model_name,
+    backup_mongodb,
+    language,
+    stage,
+    task,
+    batch_size,
+    gen_kwargs,
+    tokenizer_kwargs,
+) -> MyGenerator:
     apply_template = (
         apply_default_zh_template
         if language == "zh"
@@ -71,19 +106,24 @@ def _get_local_generator(config, model_checkpoint, model_name):
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
     if model_name == "llama":
-        config["gen_kwargs"]["pad_token_id"] = tokenizer.eos_token_id
+        gen_kwargs["pad_token_id"] = tokenizer.eos_token_id
     return MyGenerator(
         model=model,
         tokenizer=tokenizer,
-        batch_size=config["batch_size"],
+        batch_size=batch_size,
         apply_template=apply_template,
-        tokenizer_kwargs=config["tokenizer_kwargs"],
-        gen_kwargs=config["gen_kwargs"],
+        tokenizer_kwargs=tokenizer_kwargs,
+        gen_kwargs=gen_kwargs,
+        backup_mongodb=backup_mongodb,
+        query_model_name=model_name,
+        query_stage=stage,
+        query_language=language,
+        query_task=task,
     )
 
 
 def start_evaluation(
-    evaluate_config: dict,
+    config: dict,
     evaluate_task: str,
 ) -> DataFrame:
     """
@@ -112,30 +152,30 @@ def start_evaluation(
         `load_qa`, `create_generator`, `reverse_infer`, `save_score`, and
         `rouge_and_bert`, as well as directories `result_dir` and `score_dir`.
     """
-    model_name = evaluate_config["model"]["model_name"]
-    language = evaluate_config["language"]
+    model_name = config["model"]["model_name"]
+    language = config["language"]
     logging.info(
         "Start evaluating, %s:%s:%s:%s",
         model_name,
         evaluate_task,
         language,
-        evaluate_config["stage"],
+        config["stage"],
     )
 
     data_questions, _ = load_qa(
         data_language=language,
         data_task=evaluate_task,
-        count=evaluate_config["data"]["doc_count"],
-        min_length=evaluate_config["data"]["min_length"],
-        max_length=evaluate_config["data"]["max_length"],
+        count=config["data"]["doc_count"],
+        min_length=config["data"]["min_length"],
+        max_length=config["data"]["max_length"],
     )
 
     output_path = (
         result_dir
-        / f"{model_name}_{evaluate_task}_{evaluate_config['stage']}_{language}"
+        / f"{model_name}_{evaluate_task}_{config['stage']}_{language}"
     )
 
-    if os.path.exists(output_path) and not evaluate_config["force_regenerate"]:
+    if os.path.exists(output_path) and not config["force_regenerate"]:
         logging.info(
             "The result already exists in %s if you want to regenerate, "
             "please set 'force_regenerate' to True",
@@ -143,31 +183,41 @@ def start_evaluation(
         )
         qa_dataset = datasets.load_from_disk(output_path)
     else:
-        generator = create_generator(config=evaluate_config)
-        match evaluate_config["stage"]:
+        mongo_url = config["mongodb"]["url"]
+        client = pymongo.MongoClient(mongo_url)
+        backup_db = client[config["mongodb"]["db_name"]][
+            config["mongodb"]["collection_name"]
+        ]
+        generator = create_generator(
+            model_name=model_name,
+            model_checkpoint=config["model"]["model_checkpoint"],
+            task=evaluate_task,
+            language=language,
+            stage=config["stage"],
+            backup_mongodb=backup_db,
+        )
+        match config["stage"]:
             case "reverse":
-                evaluation_process = get_reverse_process(
-                    evaluate_config["language"]
-                )
+                evaluation_process = get_reverse_process(config["language"])
                 qa_dataset = reverse_infer(
                     generator=generator,
                     original_questions=data_questions,
-                    loop_count=evaluate_config["loop_count"],
+                    loop_count=config["loop_count"],
                     reverse_process=evaluation_process,
                 )
             case "reservation":
                 evaluation_process = get_reservation_process(
-                    evaluate_config["language"]
+                    config["language"]
                 )
                 qa_dataset = conservation_infer(
                     generator=generator,
                     original_questions=data_questions,
-                    loop_count=evaluate_config["loop_count"],
+                    loop_count=config["loop_count"],
                     reservation_process=evaluation_process,
                 )
             case _:
                 raise ValueError(
-                    f"The stage {evaluate_config['stage']} is not supported"
+                    f"The stage {config['stage']} is not supported"
                 )
 
         qa_dataset.save_to_disk(output_path)
@@ -179,11 +229,12 @@ def start_evaluation(
     return save_score(
         qa_dataset,
         metric_compute=rouge_and_bert,
-        loop_count=evaluate_config["loop_count"],
+        loop_count=config["loop_count"],
         model_name=model_name,
         task=evaluate_task,
         language=language,
-        path=score_dir / f"{model_name}_{evaluate_task}_{language}_scores.csv",
+        path=score_dir
+        / f"{model_name}_{evaluate_task}_{language}_{config['s']}_scores.csv",
     )
 
 
@@ -210,10 +261,13 @@ def main():
           mode.
     """
     logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
     )
     set_proxy()
     logging.info("Proxy set up")
+    # close_proxy()
+    # logging.info("Proxy closed")
 
     # set the basic accelerate environment on mutil-gpu
     write_basic_config(mixed_precision="fp16")
@@ -240,9 +294,6 @@ def main():
     for run_task in run_config["task_list"]:
         start_evaluation(run_config, run_task)
     wandb.finish()
-    close_proxy()
-    logging.info("Proxy closed")
-
 
 
 if __name__ == "__main__":

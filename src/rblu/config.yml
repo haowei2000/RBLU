@@ -1,5 +1,5 @@
-wandb: False # use wandb to log the results
-force_regenerate: True
+wandb: True # use wandb to log the results
+force_regenerate: False
 # forced to regenerate the data even if the result file exists
 
 # stage: reverse/reservation
@@ -17,17 +17,20 @@ task_list:
 - financial
 
 model_list:
+- gpt-4o-mini
 - llama
 - glm
 - qwen
-- gpt-4o-mini
 model:
   model_name: gpt-4o-mini
   model_path:
     llama: /public/model/hub/LLM-Research/Meta-Llama-3-1-8B-Instruct/
     glm: /root/.cache/modelscope/hub/ZhipuAI/glm-4-9b-chat-hf/
     qwen: /public/model/hub/qwen/
-    gpt-4o-mini: api--https://api.gptapi.us/v1/chat/completions--gpt-4o-mini--null
+    gpt-4o-mini:
+      type: api
+      url: https://api.gptapi.us/v1/chat/completions
+      model_name: gpt-4o-mini
 
 batch_size: 8
 
@@ -47,6 +50,11 @@ tokenizer_kwargs:
 gen_kwargs:
   max_new_tokens: 500
 
+# mongodb
+mongodb:
+  url: mongodb://admin:dengmen520@10.48.48.30:27017/
+  db_name: rblu
+  collection_name: default
 # chart config
 color_family:
 - '#2A557F'
