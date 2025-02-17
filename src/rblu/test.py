@@ -2,9 +2,11 @@ def process_batch_1(data):
     """处理第一批数据的函数"""
     return [f"{x}_A" for x in data]  # 示例处理：在元素后面加 `_A`
 
+
 def process_batch_2(data):
     """处理第二批数据的函数"""
     return [f"{x}_B" for x in data]  # 示例处理：在元素后面加 `_B`
+
 
 def split_and_process(lst):
     # 1️⃣ 拆分列表并保存原索引
@@ -25,6 +27,7 @@ def split_and_process(lst):
             result.append(next(iter_2))  # 取 batch_2 结果
 
     return result
+
 
 # 测试数据
 data_list = ["apple", "banana", "cherry", "date", "elderberry"]
