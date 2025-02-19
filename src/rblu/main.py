@@ -34,7 +34,7 @@ def create_generator(
     model_name: str,
     model_checkpoint: str | dict,
     backup_mongodb: MongoCollection,
-    batch_size:int,
+    batch_size: int,
     gen_kwargs: dict,
     tokenizer_kwargs: dict,
 ) -> APIGenerator | MyGenerator:
@@ -76,10 +76,11 @@ def create_generator(
         model_checkpoint["key"] = os.getenv("GPTAPI_KEY")
     return APIGenerator(
         url=model_checkpoint["url"],
-        model_name=model_checkpoint["model_name"],
+        model_name=model_name,
         key=model_checkpoint["key"],
         mongodb=backup_mongodb,
-        query_model_name=model_name,
+        query_model_name=model_checkpoint["model_name"],
+        gen_kwargs=gen_kwargs,
     )
 
 
@@ -253,7 +254,10 @@ def start_evaluation(
         task=evaluate_task,
         language=language,
         path=score_dir
-        / f"{model_name}_{evaluate_task}_{language}_{config['s']}_scores.csv",
+        / (
+            f"{model_name}_{evaluate_task}_{language}"
+            f"_{config['stage']}_scores.csv"
+        ),
     )
 
 
@@ -283,8 +287,8 @@ def main():
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
-    set_proxy()
-    logging.info("Proxy set up")
+    # set_proxy()
+    # logging.info("Proxy set up")
     # close_proxy()
     # logging.info("Proxy closed")
 

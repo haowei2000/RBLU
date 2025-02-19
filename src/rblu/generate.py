@@ -6,6 +6,7 @@ based on the given model and tokenizer. The class has the following attributes:
 import json
 import logging
 from collections.abc import Callable
+from functools import lru_cache
 from time import time
 
 import torch
@@ -28,6 +29,7 @@ class BackupGenerate:
         self,
         backup_mongodb: MongoCollection,
         query_model_name: str,
+        gen_kwargs: dict,
     ):
         """
         Initialize the generator with a MongoDB collection and a model name.
@@ -67,7 +69,11 @@ class BackupGenerate:
             search_result["output"]
             if (
                 search_result := self.mongodb.find_one(
-                    {"input": input, "model_name": self.model_name}
+                    {
+                        "input": input,
+                        "model_name": self.model_name,
+                        "gen_kwargs": json.dumps(self.gen_kwargs),
+                    }
                 )
             )
             else None
@@ -106,6 +112,7 @@ class BackupGenerate:
                     "model_name": self.model_name,
                     "input": unexisting_texts[i][1],
                     "output": response,
+                    "gen_kwargs": json.dumps(self.gen_kwargs),
                 }
             )
         if None in response_list:
@@ -183,6 +190,7 @@ class MyGenerator(BackupGenerate):
         super().__init__(
             backup_mongodb=backup_mongodb,
             query_model_name=query_model_name,
+            gen_kwargs=gen_kwargs,
         )
         self.model = model
         self.tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast = (
@@ -296,12 +304,25 @@ class APIGenerator(BackupGenerate):
         url: str,
         model_name: str,
         key: str,
-        mongodb,
-        query_model_name,
+        mongodb: MongoCollection,
+        query_model_name: str,
+        gen_kwargs: dict,
     ):
+        allowed_gen_kwargs = [
+            "temperature",
+            "max_tokens",
+            "top_p",
+            "frequency_penalty",
+            "presence_penalty",
+            "stop",
+        ]
+        self.gen_kwargs = {
+            k: v for k, v in gen_kwargs.items() if k in allowed_gen_kwargs
+        }
         super().__init__(
             backup_mongodb=mongodb,
             query_model_name=query_model_name,
+            gen_kwargs=self.gen_kwargs,
         )
         self.api_model_name = model_name
         self.url = url
@@ -309,7 +330,11 @@ class APIGenerator(BackupGenerate):
 
     @staticmethod
     def openai_generate(
-        url: str, key: str, model_name: str, messages: list[dict]
+        url: str,
+        key: str,
+        model_name: str,
+        messages: list[dict],
+        gen_kwargs: dict,
     ):
         """
         Generates text using the OpenAI API with retry mechanism.
@@ -329,6 +354,7 @@ class APIGenerator(BackupGenerate):
                 completion = client.chat.completions.create(
                     model=model_name,
                     messages=messages,
+                    **gen_kwargs,
                 )
                 return completion.choices[0].message.content
             except (ConnectionError, TimeoutError) as e:
@@ -336,7 +362,8 @@ class APIGenerator(BackupGenerate):
                     "Connection error occurred: %s. Retrying...", e
                 )
                 continue
-
+    
+    @lru_cache(maxsize=500)
     def select_generate(self, input: str) -> str:
         """
         Selects the appropriate generation method based on the API model name.
@@ -353,7 +380,7 @@ class APIGenerator(BackupGenerate):
         start_time = time()
         response = None
         match self.api_model_name:
-            case "deepseekR1":
+            case "deepseek-r1":
                 response = self._deepseekR1_generate(input)
             case _ if "gpt" in self.api_model_name:
                 response = self._chatgpt_generate(input)
@@ -382,12 +409,13 @@ class APIGenerator(BackupGenerate):
             },
             {"role": "user", "content": input},
         ]
-        url = "https://api.agicto.cn/v1"
-        key = ""
-        model = "deepseek-r1"
-        return self.openai_generate(url, key, model, messages).split(
-            "</think>\n\n"
-        )[-1]
+        return self.openai_generate(
+            url=self.url,
+            key=self.key,
+            model_name=self.model_name,
+            messages=messages,
+            gen_kwargs=self.gen_kwargs,
+        ).split("</think>\n\n")[-1]
 
     def _chatgpt_generate(self, input: str) -> str:
         """
@@ -399,12 +427,13 @@ class APIGenerator(BackupGenerate):
         Returns:
             str: The generated text content.
         """
+        logging.info("Using ChatGPT model")
         messages = [
             {"role": "developer", "content": "You are a helpful assistant."},
             {"role": "user", "content": input},
         ]
         return self.openai_generate(
-            self.url, self.key, self.api_model_name, messages
+            self.url, self.key, self.api_model_name, messages, self.gen_kwargs
         )
 
     def generate(self, text_list: list[str]) -> list[str]:

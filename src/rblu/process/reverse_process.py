@@ -4,9 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 
-def extract_question(
-    example: dict, loop: int, split_text: str
-) -> dict:
+def extract_question(example: dict, loop: int, split_text: str) -> dict:
     answer = example[f"a{loop}"]
     question = example[f"q{loop + 1}_output"].replace(answer, "", 1)
     split = question.split(split_text)
@@ -25,7 +23,7 @@ def extract_answer(example: dict, loop: int) -> dict:
 
 
 def prompt_question(example: dict, loop: int, prompt_text: str = "") -> dict:
-    example[f"q{loop}_prompt"] = example[f"{prompt_text}{example[f'q{loop}']}"]
+    example[f"q{loop}_prompt"] = f"{prompt_text}{example[f'q{loop}']}"
     return example
 
 
@@ -35,9 +33,7 @@ def prompt_answer(example: dict, loop: int, prompt_text: str = "") -> dict:
 
 
 def extract_en_reverse_question(example: dict, loop: int) -> dict:
-    return extract_question(
-        example, loop, "The question is most likely"
-    )
+    return extract_question(example, loop, "The question is most likely")
 
 
 def extract_zh_reverse_question(example: dict, loop: int) -> dict:

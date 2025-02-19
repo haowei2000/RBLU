@@ -21,16 +21,26 @@ model_list:
 - llama
 - glm
 - qwen
+# - deepseek-r1
 model:
-  model_name: glm
+  model_name: llama
   model_path:
     llama: /public/model/hub/LLM-Research/Meta-Llama-3-1-8B-Instruct/
     glm: /root/.cache/modelscope/hub/ZhipuAI/glm-4-9b-chat-hf/
-    qwen: /public/model/hub/qwen/
+    qwen: /public/model/hub/qwen/qwen2-7b-instruct/
     gpt-4o-mini:
       type: api
       url: https://api.gptapi.us/v1/chat/completions
       model_name: gpt-4o-mini
+    deepseek-r1:
+      type: api
+      url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      key: "sk-fa77a07c3fc04b5fbd9a07d80fd2f690"
+      model_name: deepseek-r1
+    gpt-3.5-turbo:
+      type: api
+      url: https://api.gptapi.us/v1/chat/completions
+      model_name: gpt-3.5-turbo
 
 batch_size: 8
 
@@ -49,7 +59,8 @@ tokenizer_kwargs:
   add_special_tokens: True
 gen_kwargs:
   max_new_tokens: 500
-
+  do_sample: False
+  temperature: 0.0
 # mongodb
 mongodb:
   url: mongodb://admin:dengmen520@10.48.48.30:27017/

@@ -3,6 +3,7 @@ The module is used to draw the chart for the evaluation result
 """
 
 import argparse
+from itertools import product
 import logging
 import os
 from pathlib import Path
@@ -87,7 +88,6 @@ class Tsne:
         output_df = pd.DataFrame(X_tsne, columns=["x", "y", "z"])
         output_df.to_parquet(self.path, index=False)
         return self.doc_count, X_tsne
-
 
     def read(self):
         if self.path.exists() is False:
@@ -370,6 +370,7 @@ def _combine_score(
     metric_name,
     mode: str,
     refer: str,
+    stage: str = "",
 ):
     """
     Purpose:combine the raw score to the line function format
@@ -377,7 +378,7 @@ def _combine_score(
     result = []
     for model_name in model_list:
         scores = pd.read_csv(
-            score_dir / f"{model_name}_{task}_{language}_scores.csv"
+            score_dir / f"{model_name}_{task}_{language}_{stage}_scores.csv"
         )
         filtered_scores = scores[
             (scores["refer"] == refer) & (scores["mode"] == mode)
@@ -408,8 +409,12 @@ def _translate_model(model_name: str, with_refer=False) -> str:
 
 
 def draw_score(
-    config,
-    metric_list=None,
+    model_list: list[str],
+    language_list: list[str],
+    stage: str,
+    task_list: list[str],
+    metric_list: list[str],
+    color_family: list[str],
     output_dir: str | Path = None,
     chart_type: str = "bar",
     suffix="png",
@@ -418,76 +423,62 @@ def draw_score(
         8.27 * 0.75,
         11.69 * 0.75,
     ]  # A4 size is 8.27 x 11.69 inches
-    for mode in ["q", "a"]:
+    for target in ["q", "a"]:
         fig, axs = plt.subplots(
-            len(config["task_list"]),
-            len(config["language_list"] * len(metric_list)),
+            len(task_list),
+            len(language_list * len(metric_list)),
             sharex=True,
             sharey=True,
             constrained_layout=True,
-            # figsize=(
-            #     5 * len(config["language_list"] * len(metric_list)),
-            #     5 * len(config["task_list"]),
-            # ),
-        )  # 2x2 网格的子图
-        row = -1
-        model_list = config["model_list"]
-        for task in config["task_list"]:
-            row = row + 1
-            col = -1
-            for language in config["language_list"]:
-                for metric_name in metric_list:
-                    col = col + 1
-                    data = {}
-                    for refer in ["0", "n-1"]:
-                        scores = _combine_score(
-                            model_list=model_list,
-                            language=language,
-                            task=task,
-                            metric_name=metric_name,
-                            mode=mode,
-                            refer=refer,
-                        )
-                        # Print the scores rounded to three decimal places
-                        scores = [
-                            [round(score, 3) for score in model_scores]
-                            for model_scores in scores
-                        ]
-                        data[refer] = scores
-                    if chart_type == "bar":
-                        ax = _bar(
-                            data_0=data["0"],
-                            data_n=data["n-1"],
-                            labels=model_list,
-                            colors=config["color_family"],
-                            output_path=None,
-                            ax=axs[row][col],
-                        )
-                    elif chart_type == "line":
-                        ax = _line(
-                            data_0=data["0"],
-                            data_n=data["n-1"],
-                            labels=model_list,
-                            colors=config["color_family"],
-                            output_path=None,
-                            ax=axs[row][col],
-                        )
-                    else:
-                        raise NotImplementedError
-                    if row == 0:
-                        ax.set_title(
-                            f"{metric_name.capitalize()} "
-                            f"{_translate_language(language).capitalize()}",
-                            loc="center",
-                        )
-                    if col == axs.shape[1] - 1:
-                        ax.set_title(
-                            label=f"{task.capitalize()}",
-                            loc="right",
-                            rotation=90,
-                            y=0.5,
-                            x=1.2,
-                        )
+        )
+        for (
+            task,
+            language,
+            metric_name,
+            refer,
+        ) in product(task_list, language_list, metric_list, ["0", "n-1"]):
+            scores = _combine_score(
+                model_list=model_list,
+                language=language,
+                task=task,
+                metric_name=metric_name,
+                mode=target,
+                refer=refer,
+                stage=stage,
+            )
+            # Print the scores rounded to three decimal places
+            scores = [
+                [round(score, 3) for score in model_scores]
+                for model_scores in scores
+            ]
+            data = {refer: scores}
+            row = task_list.index(task)
+            col = list(product(language_list, metric_list)).index(
+                (language, metric_name)
+            )
+            plotting_func = _bar if chart_type == "bar" else _line
+            ax = plotting_func(
+                data_0=data["0"],
+                data_n=data["n-1"],
+                labels=model_list,
+                colors=color_family,
+                output_path=None,
+                ax=axs[row][col],
+            )
+            if row == 0:
+                ax.set_title(
+                    f"{metric_name.capitalize()} "
+                    f"{_translate_language(language).capitalize()}",
+                    loc="center",
+                )
+            if col == axs.shape[1] - 1:
+                ax.set_title(
+                    label=f"{task.capitalize()}",
+                    loc="right",
+                    rotation=90,
+                    y=0.5,
+                    x=1.2,
+                )
         fig.supxlabel("Round")
         fig.supylabel("Score")
         if output_dir is None:
@@ -509,7 +500,7 @@ def draw_score(
         fig_legend.savefig(legend_path, bbox_inches="tight")
         plt.close(fig_legend)
         output_path = (
-            output_dir / f"{chart_type}_{mode}_combined_plots.{suffix}"
+            output_dir / f"{chart_type}_{target}_combined_plots.{suffix}"
         )  # noqa: F821
         plt.savefig(output_path, bbox_inches="tight")
         logging.info("Saved the chart to %s", output_path)
@@ -628,6 +619,7 @@ def main():
     )
     draw_length_distribution(config=config)
     draw_tsne(config=config, suffix=args.suffix)
+
 
 if __name__ == "__main__":
     main()
