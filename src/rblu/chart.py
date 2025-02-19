@@ -46,20 +46,23 @@ def text2tsne(texts_list, languge, task, model):
 
 
 class Tsne:
-    def __init__(self, language, task, model_name, mode) -> None:
+    def __init__(self, language, task, model_name, mode, stage) -> None:
         self.language = language
         self.task = task
         self.model_name = model_name
         self.mode = mode
+        self.stage = stage
         self.path = (
-            result_dir / f"{language}_{task}_{model_name}_{mode}.parquet"
+            result_dir
+            / f"{language}_{task}_{model_name}_{mode}_{stage}.parquet"
         )
         self.doc_count = 0
         self.round = 5
 
     def write_and_tsne(self):
         data_path = (
-            result_dir / f"{self.model_name}_{self.task}_{self.language}"
+            result_dir
+            / f"{self.model_name}_{self.task}_{self.stage}.{self.language}"
         )
         qa_dataset = datasets.load_from_disk(data_path)
         texts_list = [
@@ -418,6 +421,7 @@ def draw_score(
     output_dir: str | Path = None,
     chart_type: str = "bar",
     suffix="png",
+    save_single=False,
 ):
     plt.rcParams["figure.figsize"] = [
         8.27 * 0.75,
@@ -435,23 +439,24 @@ def draw_score(
             task,
             language,
             metric_name,
-            refer,
-        ) in product(task_list, language_list, metric_list, ["0", "n-1"]):
-            scores = _combine_score(
-                model_list=model_list,
-                language=language,
-                task=task,
-                metric_name=metric_name,
-                mode=target,
-                refer=refer,
-                stage=stage,
-            )
-            # Print the scores rounded to three decimal places
-            scores = [
-                [round(score, 3) for score in model_scores]
-                for model_scores in scores
-            ]
-            data = {refer: scores}
+        ) in product(task_list, language_list, metric_list):
+            data = {}
+            for refer in ["0", "n-1"]:
+                scores = _combine_score(
+                    model_list=model_list,
+                    language=language,
+                    task=task,
+                    metric_name=metric_name,
+                    mode=target,
+                    refer=refer,
+                    stage=stage,
+                )
+                # Print the scores rounded to three decimal places
+                scores = [
+                    [round(score, 3) for score in model_scores]
+                    for model_scores in scores
+                ]
+                data[refer] = scores
             row = task_list.index(task)
             col = list(product(language_list, metric_list)).index(
                 (language, metric_name)
@@ -465,6 +470,22 @@ def draw_score(
                 output_path=None,
                 ax=axs[row][col],
             )
+            if save_single:
+                single_fig, single_ax = plt.subplots()
+                single_ax = plotting_func(
+                    data_0=data["0"],
+                    data_n=data["n-1"],
+                    labels=model_list,
+                    colors=color_family,
+                    output_path=None,
+                    ax=single_ax,
+                )
+                single_fig.savefig(
+                    chart_dir
+                    / stage
+                    / chart_type
+                    / f"{task}_{language}_{metric_name}_{refer}.{suffix}"
+                )
             if row == 0:
                 ax.set_title(
                     f"{metric_name.capitalize()} "
@@ -479,13 +500,13 @@ def draw_score(
                     y=0.5,
                     x=1.2,
                 )
-        fig.supxlabel("Round")
-        fig.supylabel("Score")
         if output_dir is None:
-            output_dir = chart_dir / chart_type
+            output_dir = chart_dir / stage / chart_type
         os.makedirs(output_dir, exist_ok=True)
         # output legend
 
+        fig.supxlabel("Round")
+        fig.supylabel("Score")
         ax = axs.flat[0]
         # Save the legend separately
         fig_legend = plt.figure(figsize=(10, 2), constrained_layout=True)
@@ -609,13 +630,25 @@ def main():
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
     draw_score(
-        config=config, metric_list=["cosine", "rouge1"], suffix=args.suffix
+        model_list=config["model_list"],
+        language_list=config["language_list"],
+        stage=config["stage"],
+        task_list=config["task_list"],
+        color_family=config["color_family"],
+        metric_list=["cosine", "rouge1"],
+        suffix=args.suffix,
+        save_single=False,
     )
     draw_score(
-        config=config,
+        model_list=config["model_list"],
+        language_list=config["language_list"],
+        stage=config["stage"],
+        task_list=config["task_list"],
+        color_family=config["color_family"],
         metric_list=["cosine", "rouge1"],
         suffix=args.suffix,
         chart_type="line",
+        save_single=False,
     )
     draw_length_distribution(config=config)
     draw_tsne(config=config, suffix=args.suffix)

@@ -6,9 +6,9 @@ force_regenerate: False
 stage: reservation
 
 # the language and task for the data generation. please make sure to provide the correct dataset
-language: en
+language: zh
 language_list:
-- zh
+# - zh
 - en
 task: legal
 task_list:
@@ -23,7 +23,7 @@ model_list:
 - qwen
 # - deepseek-r1
 model:
-  model_name: llama
+  model_name: glm
   model_path:
     llama: /public/model/hub/LLM-Research/Meta-Llama-3-1-8B-Instruct/
     glm: /root/.cache/modelscope/hub/ZhipuAI/glm-4-9b-chat-hf/
