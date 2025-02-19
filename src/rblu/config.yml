@@ -35,7 +35,7 @@ model:
     deepseek-r1:
       type: api
       url: https://dashscope.aliyuncs.com/compatible-mode/v1
-      key: "sk-fa77a07c3fc04b5fbd9a07d80fd2f690"
+      key: ""
       model_name: deepseek-r1
     gpt-3.5-turbo:
       type: api
