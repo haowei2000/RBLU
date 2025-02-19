@@ -362,7 +362,7 @@ class APIGenerator(BackupGenerate):
                     "Connection error occurred: %s. Retrying...", e
                 )
                 continue
-    
+
     @lru_cache(maxsize=500)
     def select_generate(self, input: str) -> str:
         """

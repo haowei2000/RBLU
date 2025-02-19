@@ -3,9 +3,9 @@ The module is used to draw the chart for the evaluation result
 """
 
 import argparse
-from itertools import product
 import logging
 import os
+from itertools import product
 from pathlib import Path
 
 import datasets
