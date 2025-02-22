@@ -23,7 +23,7 @@ model_list:
 - qwen
 # - deepseek-r1
 model:
-  model_name: glm
+  model_name: llama
   model_path:
     llama: /public/model/hub/LLM-Research/Meta-Llama-3-1-8B-Instruct/
     glm: /root/.cache/modelscope/hub/ZhipuAI/glm-4-9b-chat-hf/

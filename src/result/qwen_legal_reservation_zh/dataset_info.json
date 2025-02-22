@@ -1,0 +1,132 @@
+{
+  "citation": "",
+  "description": "",
+  "features": {
+    "q0": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q0_prompt2ask": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a0_unextracted": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a0": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q0_prompt2rephrase": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q1_unextracted": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q1": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q1_prompt2ask": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a1_unextracted": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a1": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q1_prompt2rephrase": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q2_unextracted": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q2": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q2_prompt2ask": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a2_unextracted": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a2": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q2_prompt2rephrase": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q3_unextracted": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q3": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q3_prompt2ask": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a3_unextracted": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a3": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q3_prompt2rephrase": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q4_unextracted": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q4": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q4_prompt2ask": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a4_unextracted": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "a4": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q4_prompt2rephrase": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q5_unextracted": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "q5": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": ""
+}

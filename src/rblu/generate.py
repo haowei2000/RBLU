@@ -16,8 +16,11 @@ from pymongo.collection import Collection as MongoCollection
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as TorchDataset
 from tqdm import tqdm
-from transformers import (BatchEncoding, PreTrainedTokenizer,
-                          PreTrainedTokenizerFast)
+from transformers import (
+    BatchEncoding,
+    PreTrainedTokenizer,
+    PreTrainedTokenizerFast,
+)
 
 
 class BackupGenerate:
@@ -102,19 +105,22 @@ class BackupGenerate:
             len(unexisting_texts),
             len(text_list) - len(unexisting_texts),
         )
-        responses_generated = self.generate(
-            [text for _, text in unexisting_texts]
-        )
-        for i, response in enumerate(responses_generated):
-            response_list[unexisting_texts[i][0]] = response
-            self.mongodb.insert_one(
-                {
-                    "model_name": self.model_name,
-                    "input": unexisting_texts[i][1],
-                    "output": response,
-                    "gen_kwargs": json.dumps(self.gen_kwargs),
-                }
+        if not unexisting_texts:
+            logging.info("All responses found in the backup.")
+        else:
+            responses_generated = self.generate(
+                [text for _, text in unexisting_texts]
             )
+            for i, response in enumerate(responses_generated):
+                response_list[unexisting_texts[i][0]] = response
+                self.mongodb.insert_one(
+                    {
+                        "model_name": self.model_name,
+                        "input": unexisting_texts[i][1],
+                        "output": response,
+                        "gen_kwargs": json.dumps(self.gen_kwargs),
+                    }
+                )
         if None in response_list:
             raise ValueError("Some responses were not generated.")
         return response_list
@@ -163,7 +169,7 @@ class MyGenerator(BackupGenerate):
         model,
         tokenizer,
         batch_size,
-        apply_template,
+        apply_template: Callable[[str], list[dict]] | None,
         tokenizer_kwargs,
         gen_kwargs,
         backup_mongodb,
@@ -362,7 +368,7 @@ class APIGenerator(BackupGenerate):
                     "Connection error occurred: %s. Retrying...", e
                 )
                 continue
-    
+
     @lru_cache(maxsize=500)
     def select_generate(self, input: str) -> str:
         """

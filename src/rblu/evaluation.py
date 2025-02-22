@@ -71,13 +71,12 @@ def conservation_infer(
     """
     qa_dataset = Dataset.from_dict({"q0": original_questions})
     for loop in range(loop_count):
-        logging.info("Loop %i", loop)
+        logging.info("Evaluating Loop %i", loop)
         # add the prompt for ask for the answer
         qa_dataset = qa_dataset.map(
             reservation_process.ask,
             fn_kwargs={"loop": loop, "new_column": f"q{loop}_prompt2ask"},
         )
-
         # generate the answer
         qa_dataset = qa_dataset.add_column(
             name=f"a{loop}_unextracted",
@@ -108,6 +107,11 @@ def conservation_infer(
         qa_dataset.to_json(
             intermediate_path, orient="records", lines=True, force_ascii=False
         )
+    # Remove intermediate results if they exist
+    for loop in range(loop_count):
+        intermediate_path = Path(f"intermediate_results_loop_{loop}.json")
+        if intermediate_path.exists():
+            intermediate_path.unlink()
     return qa_dataset
 
 
@@ -172,7 +176,12 @@ def save_score(
     for loop in range(1, loop_count):
         for mode in ["q", "a"]:
             for refer in ["n-1", "0"]:
-                print("Loop:", loop, "Mode:", mode, "Refer:", refer)
+                logging.info(
+                    "Computing Score Loop:%s Mode:%s Refer:%s",
+                    loop,
+                    mode,
+                    refer,
+                )
                 score = get_score(
                     qa_dataset, metric_compute, loop, mode, refer
                 )

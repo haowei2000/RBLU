@@ -1,5 +1,6 @@
 """a evaluation module for LLAMA3.1 evaluation"""
 
+import argparse
 import logging
 import os
 from pathlib import Path
@@ -18,10 +19,8 @@ from rblu.data_load import load_qa
 from rblu.evaluation import conservation_infer, reverse_infer, save_score
 from rblu.generate import APIGenerator, MyGenerator
 from rblu.metric import rouge_and_bert
-from rblu.process.reservation_process import (
-    ReservationProcess,
-    get_reservation_process,
-)
+from rblu.process.reservation_process import (ReservationProcess,
+                                              get_reservation_process)
 from rblu.process.reverse_process import ReverseProcess, get_reverse_process
 from rblu.template import apply_default_template, apply_default_zh_template
 from rblu.utils.api import parse_api
@@ -246,19 +245,27 @@ def start_evaluation(
     qa_dataset = qa_dataset.filter(
         lambda example: all(value.strip() for value in example.values())
     )
-    return save_score(
-        qa_dataset,
-        metric_compute=rouge_and_bert,
-        loop_count=config["loop_count"],
-        model_name=model_name,
-        task=evaluate_task,
-        language=language,
-        path=score_dir
+    score_path = Path(
+        score_dir
         / (
-            f"{model_name}_{evaluate_task}_{language}"
-            f"_{config['stage']}_scores.csv"
+            f"{model_name}_{evaluate_task}_{language}_{config['stage']}_scores.csv"
         ),
     )
+    if score_path.exists():
+        logging.info(
+            "The score already exists in %s, if you want to regenerate, ",
+            score_path,
+        )
+    else:
+        save_score(
+            qa_dataset,
+            metric_compute=rouge_and_bert,
+            loop_count=config["loop_count"],
+            model_name=model_name,
+            task=evaluate_task,
+            language=language,
+            path=score_path,
+        )
 
 
 def main():
@@ -287,6 +294,13 @@ def main():
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
+    parser = argparse.ArgumentParser(description="A argparse script.")
+    parser.add_argument("--config", type=str, help="Suffix to be used")
+    args = parser.parse_args()
+    if args.config:
+        config_path = args.config
+    else:
+        config_path = Path(__file__).parent / "config.yml"
     # set_proxy()
     # logging.info("Proxy set up")
     # close_proxy()
@@ -295,11 +309,12 @@ def main():
     # set the basic accelerate environment on mutil-gpu
     write_basic_config(mixed_precision="fp16")
     with open(
-        Path(__file__).parent / "config.yml",
+        config_path,
         "r",
         encoding="utf-8",
     ) as config_file:
         run_config = yaml.safe_load(config_file)
+    logging.info("Config loaded from %s", config_path)
     if run_config["wandb"]:
         logging.info(
             "Wandb enabled and please make "

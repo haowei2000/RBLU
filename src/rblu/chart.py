@@ -3,9 +3,9 @@ The module is used to draw the chart for the evaluation result
 """
 
 import argparse
-from itertools import product
 import logging
 import os
+from itertools import product
 from pathlib import Path
 
 import datasets
@@ -143,13 +143,20 @@ def _scatter_3D(
     return ax
 
 
-def draw_tsne(config: dict, suffix: str = "png"):
+def draw_tsne(
+    model_list: list,
+    language_list: list,
+    task_list: list,
+    stage: str,
+    color_famliy: list,
+    suffix: str = "png",
+):
     fig, axs = plt.subplots(
-        len(config["task_list"]) * len(config["language_list"]),
-        len(config["model_list"]),
+        len(task_list) * len(language_list),
+        len(model_list),
         figsize=(
-            5 * len(config["model_list"]),
-            5 * len(config["task_list"]) * len(config["language_list"]),
+            5 * len(model_list),
+            5 * len(task_list) * len(language_list),
         ),
         subplot_kw={"projection": "3d"},
         constrained_layout=True,
@@ -163,17 +170,14 @@ def draw_tsne(config: dict, suffix: str = "png"):
             "legend.fontsize": 12,  # Set legend font size
         }
     )
-    model_list = list(config["model_list"])
-    language_list = list(config["language_list"])
-    task_list = list(config["task_list"])
-    for mode in ["q"]:
-        row, col = -1, -1
-        for model_name in model_list:
-            col = col + 1
-            row = -1
+    for mode in ["q", "a"]:
+        for model_name in product(model_list, language_list, task_list):
+            col = model_list.index(model_name)
             for language in language_list:
                 for task in task_list:
-                    row = row + 1
+                    row = list(product(language_list, task_list)).index(
+                        (language, task)
+                    )
                     tsne_data = Tsne(
                         language=language,
                         task=task,
@@ -186,7 +190,7 @@ def draw_tsne(config: dict, suffix: str = "png"):
                         doc_count=tsne_data.doc_count,
                         vector=vector,
                         ax=axs[row][col],
-                        colors=config["color_family2"],
+                        colors=color_famliy,
                     )
                     ax.tick_params(axis="x", pad=0)
                     ax.tick_params(axis="y", pad=0)
@@ -411,6 +415,18 @@ def _translate_model(model_name: str, with_refer=False) -> str:
     )
 
 
+def draw_legend_in_score(ax2get_label, output_dir=None, suffix="png"):
+    fig_legend = plt.figure(figsize=(10, 2), constrained_layout=True)
+    handles, labels = ax2get_label.get_legend_handles_labels()
+    labels = [
+        _translate_model(model_name=label, with_refer=True) for label in labels
+    ]
+    fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
+    legend_path = output_dir / f"legend.{suffix}"
+    fig_legend.savefig(legend_path, bbox_inches="tight")
+    plt.close(fig_legend)
+
+
 def draw_score(
     model_list: list[str],
     language_list: list[str],
@@ -423,26 +439,20 @@ def draw_score(
     suffix="png",
     save_single=False,
 ):
-    plt.rcParams["figure.figsize"] = [
-        8.27 * 0.75,
-        11.69 * 0.75,
-    ]  # A4 size is 8.27 x 11.69 inches
+    plt.rcParams["figure.figsize"] = [8.27 * 0.75, 11.69 * 0.75]  # A4 size
     for target in ["q", "a"]:
         fig, axs = plt.subplots(
             len(task_list),
-            len(language_list * len(metric_list)),
+            len(language_list) * len(metric_list),
             sharex=True,
             sharey=True,
             constrained_layout=True,
         )
-        for (
-            task,
-            language,
-            metric_name,
-        ) in product(task_list, language_list, metric_list):
-            data = {}
-            for refer in ["0", "n-1"]:
-                scores = _combine_score(
+        for task, language, metric_name in product(
+            task_list, language_list, metric_list
+        ):
+            data = {
+                refer: _combine_score(
                     model_list=model_list,
                     language=language,
                     task=task,
@@ -451,15 +461,13 @@ def draw_score(
                     refer=refer,
                     stage=stage,
                 )
-                # Print the scores rounded to three decimal places
-                scores = [
-                    [round(score, 3) for score in model_scores]
-                    for model_scores in scores
-                ]
-                data[refer] = scores
-            row = task_list.index(task)
-            col = list(product(language_list, metric_list)).index(
-                (language, metric_name)
+                for refer in ["0", "n-1"]
+            }
+            row, col = (
+                task_list.index(task),
+                list(product(language_list, metric_list)).index(
+                    (language, metric_name)
+                ),
             )
             plotting_func = _bar if chart_type == "bar" else _line
             ax = plotting_func(
@@ -471,25 +479,21 @@ def draw_score(
                 ax=axs[row][col],
             )
             if save_single:
-                single_fig, single_ax = plt.subplots()
-                single_ax = plotting_func(
-                    data_0=data["0"],
-                    data_n=data["n-1"],
-                    labels=model_list,
-                    colors=color_family,
-                    output_path=None,
-                    ax=single_ax,
-                )
-                single_fig.savefig(
-                    chart_dir
-                    / stage
-                    / chart_type
-                    / f"{task}_{language}_{metric_name}_{refer}.{suffix}"
+                save_single_chart(
+                    data=data,
+                    model_list=model_list,
+                    color_family=color_family,
+                    task=task,
+                    language=language,
+                    metric_name=metric_name,
+                    target=target,
+                    stage=stage,
+                    chart_type=chart_type,
+                    suffix=suffix,
                 )
             if row == 0:
                 ax.set_title(
-                    f"{metric_name.capitalize()} "
-                    f"{_translate_language(language).capitalize()}",
+                    f"{metric_name.capitalize()} {_translate_language(language).capitalize()}",
                     loc="center",
                 )
             if col == axs.shape[1] - 1:
@@ -503,45 +507,62 @@ def draw_score(
         if output_dir is None:
             output_dir = chart_dir / stage / chart_type
         os.makedirs(output_dir, exist_ok=True)
-        # output legend
 
         fig.supxlabel("Round")
         fig.supylabel("Score")
-        ax = axs.flat[0]
-        # Save the legend separately
-        fig_legend = plt.figure(figsize=(10, 2), constrained_layout=True)
-        handles, labels = ax.get_legend_handles_labels()
-        labels = [
-            _translate_model(model_name=label, with_refer=True)
-            for label in labels
-        ]
-        fig_legend.legend(handles, labels, loc="center", ncol=len(labels))
-        legend_path = output_dir / f"legend.{suffix}"
-
-        fig_legend.savefig(legend_path, bbox_inches="tight")
-        plt.close(fig_legend)
+        draw_legend_in_score(axs.flat[0], output_dir=output_dir, suffix=suffix)
         output_path = (
             output_dir / f"{chart_type}_{target}_combined_plots.{suffix}"
-        )  # noqa: F821
+        )
         plt.savefig(output_path, bbox_inches="tight")
         logging.info("Saved the chart to %s", output_path)
 
 
+def save_single_chart(
+    data,
+    model_list,
+    color_family,
+    task,
+    language,
+    metric_name,
+    target,
+    stage,
+    chart_type,
+    suffix,
+):
+    single_fig, single_ax = plt.subplots()
+    plotting_func = _bar if chart_type == "bar" else _line
+    plotting_func(
+        data_0=data["0"],
+        data_n=data["n-1"],
+        labels=model_list,
+        colors=color_family,
+        output_path=None,
+        ax=single_ax,
+    )
+    single_fig.savefig(
+        chart_dir
+        / stage
+        / chart_type
+        / f"{task}_{language}_{metric_name}_{target}.{suffix}"
+    )
+    plt.close(single_fig)
+
+
 def draw_length_distribution(config) -> None:
     for lang in ["en", "zh"]:
-        all_questions = {}
-        for task in ["medical", "financial", "legal"]:
-            original_questions, _ = load_qa(
+        all_questions = {
+            task: load_qa(
                 data_language=lang,
                 data_task=task,
                 count=config["data"]["doc_count"],
                 min_length=config["data"]["min_length"],
                 max_length=config["data"]["max_length"],
                 from_remote=True,
-            )
-            all_questions[task] = original_questions
+            )[0]
+            for task in ["medical", "financial", "legal"]
+        }
 
-        # Plot the distribution of string lengths for each task using box plots
         melted_data = pd.DataFrame(
             {
                 "Category": [
@@ -555,9 +576,7 @@ def draw_length_distribution(config) -> None:
             }
         )
 
-        # Remove outliers
-        Q1 = melted_data["Text Length"].quantile(0.25)
-        Q3 = melted_data["Text Length"].quantile(0.75)
+        Q1, Q3 = melted_data["Text Length"].quantile([0.25, 0.75])
         IQR = Q3 - Q1
         filtered_data = melted_data[
             ~(
@@ -565,7 +584,7 @@ def draw_length_distribution(config) -> None:
                 | (melted_data["Text Length"] > (Q3 + 1.5 * IQR))
             )
         ]
-        # Calculate and print the average length for each task
+
         for task in all_questions:
             avg_length = filtered_data[filtered_data["Category"] == task][
                 "Text Length"
@@ -573,10 +592,8 @@ def draw_length_distribution(config) -> None:
             logging.info(
                 "Average length for %s (%s): %.2f", task, lang, avg_length
             )
-        # 设置图像
-        plt.figure(figsize=(8, 6))
 
-        # 设置颜色
+        plt.figure(figsize=(8, 6))
         colors = config["color_family"]
         box = plt.boxplot(
             [
@@ -587,18 +604,12 @@ def draw_length_distribution(config) -> None:
             labels=all_questions.keys(),
         )
 
-        # 设置箱线图颜色
         for patch, color in zip(box["boxes"], colors):
             patch.set_facecolor(color)
-
-        # 设置中间的分割线用黑色
         for median in box["medians"]:
             median.set(color="black")
 
-        # 设置图表的标题
         plt.title("Text Length Distribution (Box Plot)")
-
-        # 显示图像
         output_path = (
             chart_dir
             / "string_length_distribution"
@@ -651,7 +662,14 @@ def main():
         save_single=False,
     )
     draw_length_distribution(config=config)
-    draw_tsne(config=config, suffix=args.suffix)
+    draw_tsne(
+        model_list=config["model_list"],
+        language_list=config["language_list"],
+        stage=config["stage"],
+        task_list=config["task_list"],
+        color_family=config["color_family2"],
+        suffix=args.suffix,
+    )
 
 
 if __name__ == "__main__":
