@@ -129,7 +129,7 @@ def prompt_en_reverse_answer(example: dict, loop: int) -> dict:
 
 def prompt_zh_reverse_answer(example: dict, loop: int) -> dict:
     """
-    Generates a prompt in Chinese to reverse-engineer the most likely question 
+    Generates a prompt in Chinese to reverse-engineer the most likely question
     for a given answer in a conversation.
 
     Args:
