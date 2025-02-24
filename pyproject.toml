@@ -27,6 +27,8 @@ setfit = "^1.1.1"
 openai = "^1.63.0"
 deepspeed = "^0.16.3"
 pymongo = "^4.11.1"
+mpld3 = "^0.5.10"
+nbformat = "^5.10.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"
