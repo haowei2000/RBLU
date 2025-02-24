@@ -3,7 +3,7 @@ force_regenerate: False
 # forced to regenerate the data even if the result file exists
 
 # stage: reverse/reservation
-stage: reservation
+stage: reverse
 
 # the language and task for the data generation. please make sure to provide the correct dataset
 language: zh
@@ -23,7 +23,7 @@ model_list:
 - qwen
 # - deepseek-r1
 model:
-  model_name: llama
+  model_name: gpt-4o-mini
   model_path:
     llama: /public/model/hub/LLM-Research/Meta-Llama-3-1-8B-Instruct/
     glm: /root/.cache/modelscope/hub/ZhipuAI/glm-4-9b-chat-hf/
@@ -49,7 +49,6 @@ batch_size: 8
 loop_count: 5
 data:
   doc_count: 500
-
   min_length: 1
   max_length: 2000
 tokenizer_kwargs:
@@ -73,7 +72,6 @@ color_family:
 - '#F05076'
 - '#45779C'
 - '#606060'
-- '#E465B0'
 
 color_family2:
 - '#FBECB2'

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from datasets import Dataset, load_dataset
 
-from rblu.utils.path import chart_dir, data_dir
+from rblu.utils.path import CHART_DIR, DATA_DIR
 
 
 def rename_all_columns(
@@ -139,7 +139,7 @@ def load_qa(
     ignore_columns: list[str] = None,
 ) -> tuple[list[str], list[str]]:
     """Load question-answer pairs from dataset"""
-    filename = data_dir / f"{data_language}_{data_task}.json"
+    filename = DATA_DIR / f"{data_language}_{data_task}.json"
 
     if from_remote:
         dataset = load_dataset_from_remote(data_language, data_task)
@@ -261,7 +261,7 @@ def draw_length_distribution(data_configuration) -> None:
 
         # 显示图像
         output_path = (
-            chart_dir
+            CHART_DIR
             / "string_length_distribution"
             / f"length_{lang}_combined.svg"
         )

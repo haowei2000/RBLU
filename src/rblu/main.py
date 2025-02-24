@@ -1,4 +1,4 @@
-"""a evaluation module for LLAMA3.1 evaluation"""
+"""A evaluation module for LLAMA3.1 evaluation"""
 
 import argparse
 import logging
@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 import datasets
+import matplotlib as mpl
 import pymongo
 import torch
 import yaml
@@ -16,6 +17,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 import wandb
 from rblu.data_load import load_qa
+from rblu.draw_chart.draw_metric import draw_metric
+from rblu.draw_chart.draw_tsne import draw_tsne
 from rblu.evaluation import conservation_infer, reverse_infer, save_score
 from rblu.generate import APIGenerator, MyGenerator
 from rblu.metric import rouge_and_bert
@@ -24,7 +27,7 @@ from rblu.process.reservation_process import (ReservationProcess,
 from rblu.process.reverse_process import ReverseProcess, get_reverse_process
 from rblu.template import apply_default_template, apply_default_zh_template
 from rblu.utils.api import parse_api
-from rblu.utils.path import result_dir, score_dir
+from rblu.utils.path import CONFIG_PATH, RESULT_DIR, SCORE_DIR
 from rblu.utils.proxy import close_proxy, set_proxy
 
 
@@ -189,7 +192,7 @@ def start_evaluation(
     )
 
     output_path = (
-        result_dir
+        RESULT_DIR
         / f"{model_name}_{evaluate_task}_{config['stage']}_{language}"
     )
 
@@ -246,7 +249,7 @@ def start_evaluation(
         lambda example: all(value.strip() for value in example.values())
     )
     score_path = Path(
-        score_dir
+        SCORE_DIR
         / (
             f"{model_name}_{evaluate_task}_{language}_{config['stage']}_scores.csv"
         ),
@@ -268,7 +271,7 @@ def start_evaluation(
         )
 
 
-def main():
+def eval():
     """
     Main function to set up and run the LLM evaluation process.
 
@@ -332,6 +335,54 @@ def main():
     for run_task in run_config["task_list"]:
         start_evaluation(run_config, run_task)
     wandb.finish()
+
+
+def draw():
+    parser = argparse.ArgumentParser(description="A argparse script.")
+    parser.add_argument("--suffix", type=str, help="Suffix to be used")
+    args = parser.parse_args()
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
+    mpl.rcParams["figure.figsize"] = [
+        8.27 * 0.75,
+        11.69 * 0.75,
+    ]
+    mpl.rc("font", family="Times New Roman")
+    if args.suffix is None:
+        args.suffix = "png"
+    with open(
+        file=CONFIG_PATH,
+        mode="r",
+        encoding="utf-8",
+    ) as config_file:
+        config = yaml.safe_load(config_file)  # noqa: F821
+    draw_metric(
+        model_list=config["model_list"],
+        language_list=config["language_list"],
+        stage=config["stage"],
+        task_list=config["task_list"],
+        color_family=config["color_family"],
+        metric_list=["cosine", "rouge1"],
+        suffix=args.suffix,
+        chart_type="line",
+        save_single=False,
+    )
+    draw_tsne(
+        model_list=config["model_list"],
+        language_list=config["language_list"],
+        stage=config["stage"],
+        task_list=config["task_list"],
+        color_family=config["color_family2"],
+        suffix=args.suffix,
+        doc_count=config["data"]["doc_count"],
+        round=config["loop_count"],
+    )
+
+
+def main():
+    eval()
+    draw()
 
 
 if __name__ == "__main__":

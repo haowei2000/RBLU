@@ -16,11 +16,8 @@ from pymongo.collection import Collection as MongoCollection
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as TorchDataset
 from tqdm import tqdm
-from transformers import (
-    BatchEncoding,
-    PreTrainedTokenizer,
-    PreTrainedTokenizerFast,
-)
+from transformers import (BatchEncoding, PreTrainedTokenizer,
+                          PreTrainedTokenizerFast)
 
 
 class BackupGenerate:

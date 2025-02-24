@@ -4,9 +4,9 @@ which is the main class for evaluating the model.
 """
 
 import logging
-from pathlib import Path
 import time
 from collections.abc import Callable
+from pathlib import Path
 
 import pandas as pd
 import torch

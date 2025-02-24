@@ -36,8 +36,8 @@ build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core"]
 
 [tool.poetry.scripts]
-eval = "rblu.main:main"
-draw = "rblu.chart:main"
+eval = "rblu.main:eval"
+draw = "rblu.main:draw"
 
 [tool.black]
 line-length = 50
