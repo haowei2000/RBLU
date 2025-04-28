@@ -44,6 +44,11 @@ def create_generator(
     Creates a generator instance based on the provided model checkpoint.
 
     Args:
+        tokenizer_kwargs:
+        gen_kwargs:
+        batch_size:
+        model_checkpoint:
+        language:
         model_name (str): The name of the model. model_checkpoint (str | dict):
         The checkpoint information for the model.
             Can be a string representing a local checkpoint or a dictionary with
@@ -146,14 +151,14 @@ def _get_local_generator(
 def start_evaluation(
     config: dict,
     evaluate_task: str,
-) -> DataFrame:
+ ) -> None:
     """
     Evaluates a given task using the specified configuration and process.
 
     Args:
+        evaluate_task:
         config (dict): Configuration dictionary containing model, language,
         data, and other settings. task (str): The name of the task to evaluate.
-        process (Process): The process object used for evaluation.
 
     Returns:
         DataFrame: A DataFrame containing the evaluation scores.

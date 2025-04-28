@@ -343,6 +343,7 @@ class APIGenerator(BackupGenerate):
         Generates text using the OpenAI API with retry mechanism.
 
         Args:
+            gen_kwargs:
             url (str): The base URL for the OpenAI API.
             key (str): The API key for authentication.
             model_name (str): The name of the OpenAI model to use.

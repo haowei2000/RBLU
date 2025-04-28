@@ -31,3 +31,4 @@ Latex
 src/rblu/tmp_trainer
 __pycache__/
 src/rblu/__pycache__
+src/rblu/checkpoints
