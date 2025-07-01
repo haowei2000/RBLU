@@ -16,11 +16,8 @@ from pymongo.collection import Collection as MongoCollection
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as TorchDataset
 from tqdm import tqdm
-from transformers import (
-    BatchEncoding,
-    PreTrainedTokenizer,
-    PreTrainedTokenizerFast,
-)
+from transformers import (BatchEncoding, PreTrainedTokenizer,
+                          PreTrainedTokenizerFast)
 
 
 class BackupGenerate:
@@ -29,10 +26,10 @@ class BackupGenerate:
     """
 
     def __init__(
-        self,
-        backup_mongodb: MongoCollection,
-        query_model_name: str,
-        gen_kwargs: dict,
+            self,
+            backup_mongodb: MongoCollection,
+            query_model_name: str,
+            gen_kwargs: dict,
     ):
         """
         Initialize the generator with a MongoDB collection and a model name.
@@ -165,15 +162,15 @@ class MyGenerator(BackupGenerate):
     """
 
     def __init__(
-        self,
-        model,
-        tokenizer,
-        batch_size,
-        apply_template: Callable[[str], list[dict]] | None,
-        tokenizer_kwargs,
-        gen_kwargs,
-        backup_mongodb,
-        query_model_name,
+            self,
+            model,
+            tokenizer,
+            batch_size,
+            apply_template: Callable[[str], list[dict]] | None,
+            tokenizer_kwargs,
+            gen_kwargs,
+            backup_mongodb,
+            query_model_name,
     ) -> None:
         """
         Initializes the generator class with the given parameters.
@@ -255,7 +252,7 @@ class MyGenerator(BackupGenerate):
                 }
                 outputs = self.model.generate(**inputs, **self.gen_kwargs)
                 decoded_outputs = self.tokenizer.batch_decode(
-                    outputs[:, inputs["input_ids"].size(1) :],
+                    outputs[:, inputs["input_ids"].size(1):],
                     skip_special_tokens=True,
                 )
                 responses.extend(decoded_outputs)
@@ -306,13 +303,13 @@ class MyGenerator(BackupGenerate):
 
 class APIGenerator(BackupGenerate):
     def __init__(
-        self,
-        url: str,
-        model_name: str,
-        key: str,
-        mongodb: MongoCollection,
-        query_model_name: str,
-        gen_kwargs: dict,
+            self,
+            url: str,
+            model_name: str,
+            key: str,
+            mongodb: MongoCollection,
+            query_model_name: str,
+            gen_kwargs: dict,
     ):
         allowed_gen_kwargs = [
             "temperature",
@@ -336,11 +333,11 @@ class APIGenerator(BackupGenerate):
 
     @staticmethod
     def openai_generate(
-        url: str,
-        key: str,
-        model_name: str,
-        messages: list[dict],
-        gen_kwargs: dict,
+            url: str,
+            key: str,
+            model_name: str,
+            messages: list[dict],
+            gen_kwargs: dict,
     ):
         """
         Generates text using the OpenAI API with retry mechanism.

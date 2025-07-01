@@ -1,34 +1,104 @@
-wandb/debug-cli.root.log
-wandb/debug-internal.log
-wandb/debug.log
-wandb/latest-run
+#src/data/
+src/model/
 wandb/
-wandb/run-20240905_220902-6ylqoq1h/run-6ylqoq1h.wandb
-data/en_code.json
-data/en_financial.json
-data/en_medical.json
-data/zh_code.json
-data/en_legal.json
-data/zh_financial.json
-data/zh_legal.json
-data/zh_medical.json
-src/__pycache__/proxy.cpython-311.pyc
-src/__pycache__/data_load.cpython-311.pyc
-src/__pycache__/evaluation.cpython-311.pyc
-src/__pycache__/process.cpython-311.pyc
-src/__pycache__/metric.cpython-311.pyc
-src/__pycache__/
-src/llm_evaluation/__pycache__/
-src/llm_evaluation/__pycache__
-.venv
-.venv/
-zsh
-.vscode
-.mypy_cache
-.idea
-dist
-Latex
-src/rblu/tmp_trainer
+
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
-src/rblu/__pycache__
-src/rblu/checkpoints
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Virtual environment
+env/
+venv/
+.venv/
+
+# PyInstaller
+*.manifest
+*.spec
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Pyre type checker
+.pyre/
+
+# Pytype
+.pytype/
+
+# Mypy
+.mypy_cache/
+.dmypy.json
+
+# PyTorch / TensorFlow
+*.ckpt
+*.pth
+*.pt
+*.h5
+*.pb
+*.tflite
+*.onnx
+
+# TensorBoard
+runs/
+logs/
+events.out.tfevents.*
+
+# DVC
+.dvc/
+*.dvc
+
+# Dataset cache or temp files
+*.csv
+*.tsv
+*.zip
+*.tar.gz
+*.npz
+*.npy
+*.db
+*.sqlite
+*.lmdb
+.cache/
+tmp/
+temp/
+data/
+datasets/
+
+# Output files
+output/
+outputs/
+#results/
+checkpoints/
+weights/
+
+# VSCode / PyCharm
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Jupyter Notebook metadata
+.ipynb_checkpoints/
+
+# Thumbnails / figures
+#*.png
+#*.jpg
+#*.jpeg
+#*.gif
+#*.svg
+#*.pdf
+
+# Colab
+*.ipynb~  # Colab backup
