@@ -23,7 +23,7 @@ model_list:
 - qwen
 # - deepseek-r1
 model:
-  model_name: glm
+  model_name: llama
   model_path:
     llama: /public/model/hub/LLM-Research/Meta-Llama-3-1-8B-Instruct/
     glm: /root/.cache/modelscope/hub/ZhipuAI/glm-4-9b-chat-hf/
@@ -62,7 +62,7 @@ gen_kwargs:
   temperature: 0.0
 # mongodb
 mongodb:
-  url: mongodb://admin:dengmen520@10.48.48.30:27017/
+  url: mongodb://admin:dengmen520@172.17.0.1:27017/
   db_name: rblu
   collection_name: default
 # chart config

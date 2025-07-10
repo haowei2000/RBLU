@@ -1,16 +1,16 @@
 import argparse
-import logging
-import os
-from itertools import product
-from pathlib import Path
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from pathlib import Path
+from itertools import product
+import os
+import logging
+
 import pandas as pd
 import yaml
 
 from rblu.utils.name2name import translate_language, translate_model
-from rblu.utils.path import CHART_DIR, CONFIG_PATH, SCORE_DIR
+from rblu.utils.path import CONFIG_PATH, SCORE_DIR, CHART_DIR
 
 
 def _save_single_chart(

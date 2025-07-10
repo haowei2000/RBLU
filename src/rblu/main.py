@@ -30,6 +30,29 @@ from rblu.template import apply_default_template, apply_default_zh_template
 from rblu.utils.path import CONFIG_PATH, RESULT_DIR, SCORE_DIR
 
 
+class IntelliJFormatter(logging.Formatter):
+    def formatTime(self, record, datefmt=None):
+        # 格式：yyyy-MM-dd HH:mm:ss,SSS
+        ct = self.converter(record.created)
+        t = self.formatter_date % ct
+        ms = f"{record.msecs:03.0f}"
+        return f"{t},{ms}"
+
+    def __init__(self):
+        super().__init__()
+        self.formatter_date = "%Y-%m-%d %H:%M:%S"
+        self._fmt = "%(asctime)s [%(thread)d] %(levelname)s - %(name)s - %(message)s"
+formatter = IntelliJFormatter()
+handler = logging.FileHandler("app.log")
+handler.setFormatter(formatter)
+
+logger = logging.getLogger('my.module')
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
+logger.propagate = False
+
+logger.info('Initialization complete')
+
 def create_generator(
         language: str,
         model_name: str,
@@ -162,14 +185,14 @@ def start_evaluation(
     Returns:
         DataFrame: A DataFrame containing the evaluation scores.
 
-    The function performs the following steps: 1. Logs the start of the
-    evaluation process. 2. Loads the question-answer data based on the provided
-    configuration. 3. Checks if the evaluation result already exists and loads
+    The function performs the following steps: 1. Log the start of the
+    evaluation process. 2. Load the question-answer data based on the provided
+    configuration. 3. Check if the evaluation result already exists and load
     it if available and regeneration is not forced. 4. If the result does not
     exist or regeneration is forced, it creates a generator and performs reverse
-    inference. 5. Saves the generated dataset to disk. 6. Converts the dataset
-    to JSON format. 7. Filters out rows with any empty string values in the
-    dataset. 8. Computes and saves the evaluation scores using the specified
+    inference. 5. Save the generated dataset to disk. 6. Convert the dataset
+    to JSON format. 7. Filter out rows with any empty string values in the
+    dataset. 8. Compute and save the evaluation scores using the specified
     metrics.
 
     Note:
@@ -288,7 +311,7 @@ def eval():
     Weights and Biases (wandb) for experiment tracking based on the
     configuration.
     5. Retrieve the process for the specified language.
-    6.Iterate over the task list in the configuration and evaluates each task.
+    6.Iterate over the task list in the configuration and evaluate each task.
     7.Finish the wandb session.
     8. Close the proxy.
 
@@ -299,12 +322,9 @@ def eval():
         - If 'wandb' is not enabled in the configuration, it runs in dryrun
           mode.
     """
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-    )
     parser = argparse.ArgumentParser(description="A argparse script.")
     parser.add_argument("--config", type=str, help="Suffix to be used")
+    parser.add_argument("--model", type=str, help="Model to use")
     args = parser.parse_args()
     if args.config:
         config_path = args.config
@@ -324,6 +344,9 @@ def eval():
     ) as config_file:
         run_config = yaml.safe_load(config_file)
     logging.info("Config loaded from %s", config_path)
+    if args.model:
+        logging.info("Model is changed to %s", args.model)
+        run_config["model"]["model_name"] = args.model
     if run_config["wandb"]:
         logging.info(
             "Wandb enabled and please make "
@@ -347,9 +370,6 @@ def draw():
     parser = argparse.ArgumentParser(description="A argparse script.")
     parser.add_argument("--suffix", type=str, help="Suffix to be used")
     args = parser.parse_args()
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-    )
     mpl.rcParams["figure.figsize"] = [
         8.27 * 0.75,
         11.69 * 0.75,

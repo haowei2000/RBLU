@@ -366,9 +366,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="A argparse script.")
     parser.add_argument("--suffix", type=str, help="Suffix to be used")
     args = parser.parse_args()
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-    )
     mpl.rcParams["figure.figsize"] = [
         8.27 * 0.75,
         11.69 * 0.75,

@@ -3,6 +3,7 @@ a script to load data from different sources and save it to csv
 folder path is src/rblu/data
 """
 
+from typing import Optional
 import matplotlib.pyplot as plt
 import pandas as pd
 from datasets import Dataset, load_dataset
@@ -14,7 +15,7 @@ def rename_all_columns(
     dataset: Dataset,
     candidate_column: list[str],
     new_column: str,
-    ignore_columns: list[str] = None,
+    ignore_columns: Optional[list[str]] = None,
 ) -> Dataset:
     """
     Renames columns in a dataset based on candidate column names and a new
