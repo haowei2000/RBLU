@@ -47,12 +47,12 @@ def perform_tsne(texts_flat, device):
 
 
 def save_tsne_results(
-        X_tsne, language, task, model, mode, stage, suffix="parquet"
+    X_tsne, language, task, model, mode, stage, suffix="parquet"
 ):
     """Save the t-SNE results to a Parquet file."""
     output_df = pd.DataFrame(X_tsne, columns=["x", "y", "z"])
     output_path = (
-            RESULT_DIR / f"{language}_{task}_{model}_{mode}_{stage}.{suffix}"
+        RESULT_DIR / f"{language}_{task}_{model}_{mode}_{stage}.{suffix}"
     )
     output_df.to_parquet(output_path, index=False)
     logging.info(f"Saved t-SNE results to {output_path}")
@@ -73,7 +73,7 @@ def text2tsne(texts_list, language, task, model):
 
 class Tsne:
     def __init__(
-            self, language, task, model_name, mode, stage, doc_count, round
+        self, language, task, model_name, mode, stage, doc_count, round
     ) -> None:
         self.language = language
         self.task = task
@@ -81,16 +81,16 @@ class Tsne:
         self.mode = mode
         self.stage = stage
         self.path = (
-                RESULT_DIR
-                / f"{language}_{task}_{model_name}_{mode}_{stage}.parquet"
+            RESULT_DIR
+            / f"{language}_{task}_{model_name}_{mode}_{stage}.parquet"
         )
         self.doc_count = doc_count
         self.round = round
 
     def _write_and_tsne(self):
         data_path = (
-                RESULT_DIR
-                / f"{self.model_name}_{self.task}_{self.stage}_{self.language}"
+            RESULT_DIR
+            / f"{self.model_name}_{self.task}_{self.stage}_{self.language}"
         )
         texts_list = prepare_texts_for_tsne(data_path, self.mode)
 
@@ -202,19 +202,19 @@ def _scatter_3D(round, doc_count, vector, colors, fig):
 
 
 def draw_tsne_single(
-        model_list,
-        language_list,
-        task_list,
-        stage,
-        color_family,
-        doc_count,
-        round,
-        suffix="html",
+    model_list,
+    language_list,
+    task_list,
+    stage,
+    color_family,
+    doc_count,
+    round,
+    suffix="html",
 ):
     """Draw t-SNE scatter plots for different models, languages, and tasks."""
     for target, language in product(["q", "a"], language_list):
         for model_name, language, task in product(
-                model_list, language_list, task_list
+            model_list, language_list, task_list
         ):
             tsne_data = Tsne(
                 language, task, model_name, target, stage, doc_count, round
@@ -256,9 +256,9 @@ if __name__ == "__main__":
     if args.suffix is None:
         args.suffix = "html"
     with open(
-            file=CONFIG_PATH,
-            mode="r",
-            encoding="utf-8",
+        file=CONFIG_PATH,
+        mode="r",
+        encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
     draw_tsne_single(

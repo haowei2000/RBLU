@@ -24,7 +24,7 @@ from rblu.draw_chart.draw_tsne import draw_tsne
 from rblu.evaluation import conservation_infer, reverse_infer, save_score
 from rblu.generate import APIGenerator, MyGenerator
 from rblu.metric import rouge_and_bert
-from rblu.process.reservation_process import (get_reservation_process)
+from rblu.process.reservation_process import get_reservation_process
 from rblu.process.reverse_process import get_reverse_process
 from rblu.template import apply_default_template, apply_default_zh_template
 from rblu.utils.path import CONFIG_PATH, RESULT_DIR, SCORE_DIR
@@ -41,26 +41,31 @@ class IntelliJFormatter(logging.Formatter):
     def __init__(self):
         super().__init__()
         self.formatter_date = "%Y-%m-%d %H:%M:%S"
-        self._fmt = "%(asctime)s [%(thread)d] %(levelname)s - %(name)s - %(message)s"
+        self._fmt = (
+            "%(asctime)s [%(thread)d] %(levelname)s - %(name)s - %(message)s"
+        )
+
+
 formatter = IntelliJFormatter()
 handler = logging.FileHandler("app.log")
 handler.setFormatter(formatter)
 
-logger = logging.getLogger('my.module')
+logger = logging.getLogger("my.module")
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 logger.propagate = False
 
-logger.info('Initialization complete')
+logger.info("Initialization complete")
+
 
 def create_generator(
-        language: str,
-        model_name: str,
-        model_checkpoint: str | dict,
-        backup_mongodb: MongoCollection,
-        batch_size: int,
-        gen_kwargs: dict,
-        tokenizer_kwargs: dict,
+    language: str,
+    model_name: str,
+    model_checkpoint: str | dict,
+    backup_mongodb: MongoCollection,
+    batch_size: int,
+    gen_kwargs: dict,
+    tokenizer_kwargs: dict,
 ) -> APIGenerator | MyGenerator:
     """
     Creates a generator instance based on the provided model checkpoint.
@@ -86,8 +91,8 @@ def create_generator(
     model_checkpoint = model_checkpoint
 
     if (
-            not isinstance(model_checkpoint, dict)
-            or model_checkpoint["type"] != "api"
+        not isinstance(model_checkpoint, dict)
+        or model_checkpoint["type"] != "api"
     ):
         return _get_local_generator(
             model_checkpoint,
@@ -99,8 +104,8 @@ def create_generator(
             tokenizer_kwargs=tokenizer_kwargs,
         )
     if (
-            "key" not in model_checkpoint.keys()
-            or model_checkpoint["key"] == "envs"
+        "key" not in model_checkpoint.keys()
+        or model_checkpoint["key"] == "envs"
     ):
         model_checkpoint["key"] = os.getenv("GPTAPI_KEY")
     return APIGenerator(
@@ -114,13 +119,13 @@ def create_generator(
 
 
 def _get_local_generator(
-        model_checkpoint: str,
-        model_name: str,
-        language: str,
-        batch_size: int,
-        backup_mongodb: MongoCollection,
-        gen_kwargs: dict,
-        tokenizer_kwargs: dict,
+    model_checkpoint: str,
+    model_name: str,
+    language: str,
+    batch_size: int,
+    backup_mongodb: MongoCollection,
+    gen_kwargs: dict,
+    tokenizer_kwargs: dict,
 ) -> MyGenerator:
     """
     Initializes and returns a MyGenerator instance with the specified
@@ -171,8 +176,8 @@ def _get_local_generator(
 
 
 def start_evaluation(
-        config: dict,
-        evaluate_task: str,
+    config: dict,
+    evaluate_task: str,
 ) -> None:
     """
     Evaluates a given task using the specified configuration and process.
@@ -219,8 +224,8 @@ def start_evaluation(
     )
 
     output_path = (
-            RESULT_DIR
-            / f"{model_name}_{evaluate_task}_{config['stage']}_{language}"
+        RESULT_DIR
+        / f"{model_name}_{evaluate_task}_{config['stage']}_{language}"
     )
 
     if os.path.exists(output_path) and not config["force_regenerate"]:
@@ -338,9 +343,9 @@ def eval():
     # set the basic 'accelerate' environment on mutil-gpu
     write_basic_config(mixed_precision="fp16")
     with open(
-            config_path,
-            "r",
-            encoding="utf-8",
+        config_path,
+        "r",
+        encoding="utf-8",
     ) as config_file:
         run_config = yaml.safe_load(config_file)
     logging.info("Config loaded from %s", config_path)
@@ -378,9 +383,9 @@ def draw():
     if args.suffix is None:
         args.suffix = "png"
     with open(
-            file=CONFIG_PATH,
-            mode="r",
-            encoding="utf-8",
+        file=CONFIG_PATH,
+        mode="r",
+        encoding="utf-8",
     ) as config_file:
         config = yaml.safe_load(config_file)  # noqa: F821
     draw_metric(

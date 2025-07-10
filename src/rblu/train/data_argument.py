@@ -1,7 +1,8 @@
 """
 A module to generate reverse dataset
 """
-from datasets import load_from_disk, Dataset
+
+from datasets import Dataset, load_from_disk
 
 from rblu.utils.path import RESULT_DIR
 
@@ -13,6 +14,8 @@ print(argued_dataset)
 dataset2train: list = []
 for loop in range(5):
     question_column, answer_column = f"a{loop}_prompt", f"q{loop + 1}_output"
-    train_dataset = argued_dataset.select_columns([question_column, answer_column])
+    train_dataset = argued_dataset.select_columns(
+        [question_column, answer_column]
+    )
     sample_record = train_dataset.to_pandas().head(1)
     print(sample_record)
