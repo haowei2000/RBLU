@@ -4,6 +4,7 @@ folder path is src/rblu/data
 """
 
 from typing import Optional
+
 import matplotlib.pyplot as plt
 import pandas as pd
 from datasets import Dataset, load_dataset
